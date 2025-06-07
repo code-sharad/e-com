@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold-50: #fefdf8;
+  --gold-100: #fdf6e3;
+  --gold-200: #f9e8c1;
+  --gold-300: #f3d394;
+  --gold-400: #ecb765;
+  --gold-500: #d4a574;
+  --gold-600: #b8935f;
+  --gold-700: #9a7b4f;
+  --gold-800: #7d6344;
+  --gold-900: #665139;
+}
+
+.dark {
+  --gold-50: #665139;
+  --gold-100: #7d6344;
+  --gold-200: #9a7b4f;
+  --gold-300: #b8935f;
+  --gold-400: #d4a574;
+  --gold-500: #ecb765;
+  --gold-600: #f3d394;
+  --gold-700: #f9e8c1;
+  --gold-800: #fdf6e3;
+  --gold-900: #fefdf8;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .gold-gradient {
+    @apply bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600;
+  }
+
+  .luxury-card {
+    @apply bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg;
+  }
+
+  .elegant-shadow {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+}
