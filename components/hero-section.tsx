@@ -10,7 +10,7 @@ export default function HeroSection() {
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/placeholder.svg?height=1080&width=1920"
+          src="/background.avif?height=1080&width=1920"
           alt="Luxury Jewelry Collection"
           fill
           className="object-cover"
@@ -23,7 +23,7 @@ export default function HeroSection() {
       <div className="relative z-10 text-center max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <div className="mb-8 animate-fade-in">
-          <Image src="/logo1.png" alt="Global Saanvika" width={120} height={120} className="mx-auto mb-6" />
+          <Image src="public\logo1.png" alt="Global Saanvika" width={120} height={120} className="mx-auto mb-6" />
         </div>
 
         {/* Main Heading */}

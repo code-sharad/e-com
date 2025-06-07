@@ -13,7 +13,7 @@
     "setup:validate": "node setup.js --validate",
     "build:analyze": "npm run build && npx @next/bundle-analyzer",
     "clean": "rm -rf .next out node_modules/.cache",
-    "export": "next build && next export",
+    "export": "next build",
     "deploy": "npm run build"
   },
   "dependencies": {

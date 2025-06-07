@@ -11,7 +11,7 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center space-x-3 mb-6">
-              <Image src="/logo.png" alt="Global Saanvika" width={40} height={40} className="w-10 h-10" />
+              <Image src="/logo1.png" alt="Global Saanvika" width={50} height={50} className="w-10 h-10" />
               <span className="font-serif text-xl font-bold text-gold-500">Global Saanvika</span>
             </Link>
 
