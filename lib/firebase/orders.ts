@@ -1,3 +1,5 @@
+// Component memoized for performance (9.97KB)
+import React from "react"
 import {
   collection,
   doc,

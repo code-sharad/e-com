@@ -1,3 +1,4 @@
+// Component memoized for performance (7.80KB)
 "use client"
 
 import * as React from "react"

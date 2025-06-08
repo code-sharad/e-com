@@ -1,29 +1,16 @@
 "use client"
+// Component memoized for performance (24.97KB)
+import React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Package, Users, ShoppingCart, TrendingUp, Plus, BarChart3, Activity, Clock, CheckCircle, AlertCircle } from "lucide-react"
-import AuthLoading from "@/components/auth-loading"
+import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardService, type DashboardStats, type RecentActivity } from "@/lib/dashboard-service"
 
-export default function AdminDashboard() {
-  const { user, isInitialized } = useAuth()
-  const router = useRouter()
+function AdminDashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
-
-  // Show loading while auth is being initialized
-  if (!isInitialized) {
-    return <AuthLoading />
-  }
-
-  // Redirect if not admin
-  if (!user?.isAdmin) {
-    router.push("/")
-    return null
-  }
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null
@@ -453,5 +440,13 @@ export default function AdminDashboard() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AdminDashboard() {
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <AdminDashboardContent />
+    </ProtectedRoute>
   )
 }

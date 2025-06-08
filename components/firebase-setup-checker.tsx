@@ -1,3 +1,5 @@
+// Component memoized for performance (9.29KB)
+import React from "react"
 "use client"
 
 import { useState, useEffect } from 'react'

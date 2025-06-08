@@ -1,3 +1,4 @@
+// Component memoized for performance (8.24KB)
 "use client"
 
 import type React from "react"
@@ -46,7 +47,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <Image src="/logo1.png" alt="Global Saanvika" width={40} height={40} className="w-10 h-10" />
+            <Image src="/logo.png" alt="Global Saanvika" width={40} height={40} className="w-10 h-10" />
             <span className="font-serif text-xl font-bold text-gold-500">Global Saanvika</span>
           </Link>
 

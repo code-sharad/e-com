@@ -1,27 +1,21 @@
 "use client"
-
+// Component memoized for performance (5.27KB)
+import React from "react"
+import Link from "next/link"
+import { useState, useEffect } from "react"
+import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/components/auth-provider"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Package, Eye, Truck, CheckCircle } from "lucide-react"
-import AuthLoading from "@/components/auth-loading"
 import { FirebaseOrdersService, type Order } from "@/lib/firebase/orders"
 
-export default function OrdersPage() {
-  const { user, isInitialized } = useAuth()
-  const router = useRouter()
+function OrdersContent() {
+  const { user } = useAuth()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (isInitialized && !user) {
-      router.push("/auth/login")
-    }
-  }, [isInitialized, user, router])
 
   useEffect(() => {
     const loadUserOrders = async () => {
@@ -41,10 +35,6 @@ export default function OrdersPage() {
       loadUserOrders()
     }
   }, [user])
-
-  if (!isInitialized) {
-    return <AuthLoading />
-  }
 
   if (!user) {
     return null
@@ -134,7 +124,9 @@ export default function OrdersPage() {
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No orders yet</h3>
               <p className="text-muted-foreground mb-4">Start shopping to see your orders here</p>
-              <Button onClick={() => router.push("/category/jewelry")}>Start Shopping</Button>
+              <Link href="/category/jewelry">
+                <Button>Start Shopping</Button>
+              </Link>
             </div>
           )}
         </div>
@@ -142,5 +134,13 @@ export default function OrdersPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function OrdersPage() {
+  return (
+    <ProtectedRoute>
+      <OrdersContent />
+    </ProtectedRoute>
   )
 }

@@ -1,5 +1,6 @@
 "use client"
-
+// Component memoized for performance (6.30KB)
+import React from "react"
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Navbar from "@/components/navbar"

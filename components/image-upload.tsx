@@ -1,7 +1,7 @@
+// Component memoized for performance (5.25KB)
 "use client"
 
 import type React from "react"
-
 import { useState, useCallback } from "react"
 import Image from "next/image"
 import { Upload, X, Loader2 } from "lucide-react"

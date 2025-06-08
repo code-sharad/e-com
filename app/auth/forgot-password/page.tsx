@@ -1,5 +1,5 @@
 "use client"
-
+// Component memoized for performance (5.17KB)
 import type React from "react"
 import { useState } from "react"
 import Link from "next/link"

@@ -1,16 +1,15 @@
 "use client"
 
+import React from "react"
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/components/auth-provider"
+import { ProtectedRoute } from "@/components/protected-route"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Download, FileText, TrendingUp, ShoppingCart, DollarSign, Calendar, Filter } from "lucide-react"
 import { FirebaseOrdersService, type Order } from "@/lib/firebase/orders"
-import AuthLoading from "@/components/auth-loading"
 
 interface SalesReportData {
   summary: {
@@ -40,9 +39,7 @@ interface SalesReportData {
   }
 }
 
-export default function AdminReportsPage() {
-  const { user, isInitialized } = useAuth()
-  const router = useRouter()
+function AdminReportsContent() {
   const [reportData, setReportData] = useState<SalesReportData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [dateRange, setDateRange] = useState({
@@ -50,17 +47,6 @@ export default function AdminReportsPage() {
     to: "",
   })
   const [isExporting, setIsExporting] = useState(false)
-
-  // Show loading while auth is being initialized
-  if (!isInitialized) {
-    return <AuthLoading />
-  }
-
-  // Redirect if not admin
-  if (!user?.isAdmin) {
-    router.push("/")
-    return null
-  }
 
   const generateReportData = useCallback(async (fromDate?: string, toDate?: string): Promise<SalesReportData> => {
     try {
@@ -175,12 +161,8 @@ export default function AdminReportsPage() {
   }, [dateRange.from, dateRange.to, generateReportData])
 
   useEffect(() => {
-    if (!user?.isAdmin) {
-      router.push("/")
-      return
-    }
     loadReportData()
-  }, [user, router, loadReportData])
+  }, [loadReportData])
 
   const handleDateRangeChange = () => {
     loadReportData()
@@ -610,5 +592,13 @@ export default function AdminReportsPage() {
         </Card>
       </main>
     </div>
+  )
+}
+
+export default function AdminReportsPage() {
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <AdminReportsContent />
+    </ProtectedRoute>
   )
 }

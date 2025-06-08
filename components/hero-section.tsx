@@ -23,7 +23,7 @@ export default function HeroSection() {
       <div className="relative z-10 text-center max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <div className="mb-8 animate-fade-in">
-          <Image src="public\logo1.png" alt="Global Saanvika" width={120} height={120} className="mx-auto mb-6" />
+          <Image src="public\logo.png" alt="Global Saanvika" width={120} height={120} className="mx-auto mb-6" />
         </div>
 
         {/* Main Heading */}

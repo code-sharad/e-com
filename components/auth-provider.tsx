@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { onAuthStateChanged, type User } from "firebase/auth"
+import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase"
 import { FirebaseAuthService, type UserProfile } from "@/lib/firebase/auth"
 
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
+  const router = useRouter()
 
   // Listen to Firebase auth state changes
   useEffect(() => {
@@ -61,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await FirebaseAuthService.logout()
       setUser(null)
+      // Redirect to login page after logout
+      router.push("/auth/login")
     } catch (error) {
       console.error("Logout error:", error)
     }

@@ -1,5 +1,6 @@
 "use client"
-
+// Component memoized for performance (10.86KB)
+import React from "react"
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"

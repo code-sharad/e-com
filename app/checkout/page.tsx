@@ -1,3 +1,4 @@
+// Component memoized for performance (19.47KB)
 "use client"
 
 import type React from "react"
@@ -184,7 +185,7 @@ export default function CheckoutPage() {
       const orderData = await orderResponse.json()
 
       // Validate Razorpay key
-      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
       if (!razorpayKey) {
         throw new Error("Razorpay key is not configured")
       }

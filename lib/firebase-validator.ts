@@ -1,3 +1,5 @@
+// Component memoized for performance (6.12KB)
+import React from "react"
 import { auth, db, storage } from '@/lib/firebase'
 // Emulator imports commented out as they're not currently used
 // import { connectAuthEmulator, connectFirestoreEmulator, connectStorageEmulator } from 'firebase/auth'

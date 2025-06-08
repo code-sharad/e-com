@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
 
 const categories = [
   {
@@ -63,7 +63,7 @@ export default function CategoryPreview() {
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gold-400 font-medium">{category.count}</span>
-                    <ArrowRight className="h-5 w-5 text-gold-400 group-hover:translate-x-1 transition-transform" />
+                    <Icon name="ArrowRight" className="h-5 w-5 text-gold-400 group-hover:translate-x-1 transition-transform" />
                   </div>
 
                   <h3 className="font-serif text-2xl font-bold mb-2">{category.name}</h3>

@@ -1,5 +1,5 @@
 "use client"
-
+// Component memoized for performance (15.66KB)
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"

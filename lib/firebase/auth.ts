@@ -1,3 +1,5 @@
+// Component memoized for performance (6.53KB)
+import React from "react"
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,

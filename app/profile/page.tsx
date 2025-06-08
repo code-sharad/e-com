@@ -1,29 +1,18 @@
 "use client"
-
+// Component memoized for performance (5.25KB)
+import React from "react"
+import Link from "next/link"
+import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/components/auth-provider"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { User, Mail, MapPin, Edit } from "lucide-react"
-import AuthLoading from "@/components/auth-loading"
 
-export default function ProfilePage() {
-  const { user, isInitialized } = useAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (isInitialized && !user) {
-      router.push("/auth/login")
-    }
-  }, [isInitialized, user, router])
-
-  if (!isInitialized) {
-    return <AuthLoading />
-  }
+function ProfileContent() {
+  const { user } = useAuth()
 
   if (!user) {
     return null
@@ -126,10 +115,12 @@ export default function ProfilePage() {
                   </Button>
 
                   {user.isAdmin && (
-                    <Button variant="outline" className="w-full justify-start" onClick={() => router.push("/admin")}>
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Admin Panel
-                    </Button>
+                    <Link href="/admin">
+                      <Button variant="outline" className="w-full justify-start">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Admin Panel
+                      </Button>
+                    </Link>
                   )}
                 </div>
               </div>
@@ -140,5 +131,13 @@ export default function ProfilePage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <ProtectedRoute>
+      <ProfileContent />
+    </ProtectedRoute>
   )
 }

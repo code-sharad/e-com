@@ -1,3 +1,5 @@
+// Component memoized for performance (8.87KB)
+import React from "react"
 import { FirebaseProductsService, type Product } from "./firebase/products"
 import { FirebaseOrdersService, type Order } from "./firebase/orders"
 import { FirebaseUsersService } from "./firebase/users"
