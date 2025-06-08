@@ -16,11 +16,23 @@ interface DisplayProduct {
 export default function FeaturedCollections() {
   const [featuredProducts, setFeaturedProducts] = useState<DisplayProduct[]>([])
   const [loading, setLoading] = useState(true)
+  const [showingRecent, setShowingRecent] = useState(false)
 
   useEffect(() => {
     const loadFeaturedProducts = async () => {
       try {
-        const products = await FirebaseProductsService.getFeaturedProducts(4)
+        // First try to get featured products
+        let products = await FirebaseProductsService.getFeaturedProducts(4)
+        let isShowingRecent = false
+        
+        // If no featured products, get recent products instead
+        if (products.length === 0) {
+          console.log('No featured products found, showing recent products instead')
+          const { products: allProducts } = await FirebaseProductsService.getProducts({ limit: 4 })
+          products = allProducts
+          isShowingRecent = true
+        }
+        
         const displayProducts = products.map(product => ({
           id: product.id || '',
           name: product.name,
@@ -28,7 +40,9 @@ export default function FeaturedCollections() {
           image: product.images[0] || '/placeholder.svg',
           category: product.category
         }))
+        
         setFeaturedProducts(displayProducts)
+        setShowingRecent(isShowingRecent)
       } catch (error) {
         console.error("Error loading featured products:", error)
       } finally {
@@ -44,11 +58,13 @@ export default function FeaturedCollections() {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            Featured Collections
+            {showingRecent ? "Latest Collections" : "Featured Collections"}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Discover our most coveted pieces, carefully curated for those who appreciate exceptional craftsmanship and
-            timeless beauty.
+            {showingRecent 
+              ? "Explore our newest arrivals, featuring the latest designs and exceptional craftsmanship."
+              : "Discover our most coveted pieces, carefully curated for those who appreciate exceptional craftsmanship and timeless beauty."
+            }
           </p>
         </div>
 

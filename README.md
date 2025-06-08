@@ -1,12 +1,27 @@
-# 🛍️ Global Saanvika E-commerce Platform
+# Global Saanvika E-commerce Platform
 
-A modern, full-featured e-commerce platform built with Next.js 15, React 19, and TypeScript. Features a complete shopping experience with admin dashboard, user authentication, product management, and integrated payment processing.
+A modern, full-featured e-commerce application built with Next.js 15, Firebase, and Tailwind CSS. This platform provides a complete solution for online retail with admin management, user authentication, shopping cart, and payment integration.
 
 ![Next.js](https://img.shields.io/badge/Next.js-15.2.4-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
 ![Firebase](https://img.shields.io/badge/Firebase-11.9.0-orange?style=flat-square&logo=firebase)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.17-blue?style=flat-square&logo=tailwindcss)
+
+## 🌐 Live Demo
+
+**Production URL:** [https://lucky-sawine-0a207c.netlify.app](https://lucky-sawine-0a207c.netlify.app)
+
+### Test Accounts
+```
+Admin Account:
+Email: admin@example.com
+Password: admin123
+
+Customer Account:
+Email: user@example.com
+Password: user123
+```
 
 ## ✨ Features
 

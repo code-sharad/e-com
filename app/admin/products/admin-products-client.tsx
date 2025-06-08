@@ -240,8 +240,7 @@ export default function AdminProductsClient() {
                     )}
                   </td>
                 </tr>
-              ) : (
-                productsToDisplay.map((product) => (
+              ) : (                productsToDisplay.map((product) => (
                   <tr key={product.id} className="border-t border-border hover:bg-muted/50">
                     <td className="px-4 py-3">
                       <div className="flex items-center">
@@ -268,7 +267,8 @@ export default function AdminProductsClient() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant="outline">{product.category}</Badge>
-                    </td>                    <td className="px-4 py-3">${product.price.toFixed(2)}</td>
+                    </td>
+                    <td className="px-4 py-3">${product.price.toFixed(2)}</td>
                     <td className="px-4 py-3">{product.stockQuantity}</td>
                     <td className="px-4 py-3">
                       {product.stockQuantity > 5 ? (
@@ -299,7 +299,8 @@ export default function AdminProductsClient() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </Link>
-                          </DropdownMenuItem>                          <DropdownMenuItem
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => product.id && handleDeleteProduct(product.id)}
                             className="text-red-600 focus:text-red-600"
                           >

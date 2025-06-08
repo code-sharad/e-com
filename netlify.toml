@@ -1,15 +1,30 @@
 [build]
   publish = "out"
+  command = "npm run deploy"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Handle client-side routing for SPA
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/product/*"
+  to = "/product/[id]/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/category/*"
+  to = "/category/[category]/index.html"
+  status = 200
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200
-
-# Handle API routes (if using Netlify Functions)
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
   status = 200
 
 # Security headers

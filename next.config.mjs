@@ -1,10 +1,4 @@
 /** @type {import('next').NextConfig} */
-import bundleAnalyzer from '@next/bundle-analyzer'
-
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-})
-
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -14,49 +8,32 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
   // Static export for Netlify
   trailingSlash: true,
   output: 'export',
   distDir: 'out',
   
-  // Performance optimizations
+  // Disable problematic experimental features for static export
   experimental: {
-    optimizeCss: true,
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
+    // Remove turbo and other experimental features that might cause issues
   },
   
-  // Don't use modularizeImports for lucide-react as we're using our custom Icon component
-  modularizeImports: {
-    // Other libraries can still use this optimization if needed
-  },
-  
-  // Webpack optimizations
+  // Simplified webpack config
   webpack: (config, { dev, isServer }) => {
-    // Optimize for development
+    // Only add essential optimizations
     if (dev) {
-      config.cache = {
-        type: 'filesystem',
-        cacheDirectory: '.next/cache/webpack',
-      }
-    }
-    
-    // Reduce bundle size
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'react': 'react',
-      'react-dom': 'react-dom',
+      config.cache = false; // Disable cache in dev to avoid issues
     }
     
     return config
   },
 }
 
-export default withBundleAnalyzer(nextConfig)
+export default nextConfig

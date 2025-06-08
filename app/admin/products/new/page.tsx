@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, ArrowLeft, Plus, Minus } from "lucide-react"
 import { FirebaseProductsService } from "@/lib/firebase/products"
@@ -34,7 +35,8 @@ export default function NewProductPage() {
     dimensions: "",
     material: "",
     care: "",
-    status: "active" as const,
+    status: "active" as "active" | "inactive",
+    featured: false,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -45,8 +47,13 @@ export default function NewProductPage() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
+    
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }))
 
     // Clear error when user starts typing
     if (errors[name]) {
@@ -141,7 +148,7 @@ export default function NewProductPage() {
           },
           {} as Record<string, string>,
         ),
-        featured: false,
+        featured: formData.featured,
       }
 
       // Save product
@@ -283,6 +290,40 @@ export default function NewProductPage() {
                   className={errors.stock ? "border-red-500" : ""}
                 />
                 {errors.stock && <p className="text-red-500 text-sm mt-1">{errors.stock}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Visibility Settings */}
+          <div className="bg-card rounded-lg p-6">
+            <h2 className="font-serif text-xl font-semibold text-foreground mb-6">Visibility Settings</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="status">Product Status</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as "active" | "inactive" }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active (In Stock)</SelectItem>
+                    <SelectItem value="inactive">Inactive (Out of Stock)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="featured"
+                  checked={formData.featured}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: !!checked }))}
+                />
+                <Label htmlFor="featured" className="text-sm font-medium">
+                  Featured Product
+                  <span className="block text-xs text-muted-foreground">
+                    Show this product on the homepage featured section
+                  </span>
+                </Label>
               </div>
             </div>
           </div>
