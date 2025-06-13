@@ -57,37 +57,53 @@ export function ImageUpload({
       }
 
       // Validate files before upload
+      const validFiles: File[] = []
       for (const file of filesToUpload) {
         if (!file.type.startsWith('image/')) {
           setError("Please select only image files")
           return
         }
-        if (file.size > 10 * 1024 * 1024) {
-          setError(`File "${file.name}" is too large. Maximum size is 10MB.`)
+        if (file.size > 5 * 1024 * 1024) { // Reduced to 5MB for better reliability
+          setError(`File "${file.name}" is too large. Maximum size is 5MB.`)
           return
         }
+        validFiles.push(file)
       }
 
       setUploading(true)
       
-      // Add timeout for upload operation
-      const uploadTimeout = setTimeout(() => {
-        setUploading(false)
-        setError("Upload timeout. Please check your connection and try again.")
-      }, 30000) // 30 second timeout
-      
       try {
-        console.log(`Uploading ${filesToUpload.length} files...`)
-        const uploadedUrls = await FirebaseStorageService.uploadImages(filesToUpload, folder)
-        clearTimeout(uploadTimeout)
-        const newImages = [...images, ...uploadedUrls]
-        setImages(newImages)
-        onImagesChange(newImages)
-        console.log("Upload successful:", uploadedUrls)
+        console.log(`Uploading ${validFiles.length} files...`)
+        const uploadedUrls = await FirebaseStorageService.uploadImages(validFiles, folder)
+        
+        if (uploadedUrls.length > 0) {
+          const newImages = [...images, ...uploadedUrls]
+          setImages(newImages)
+          onImagesChange(newImages)
+          console.log("Upload successful:", uploadedUrls)
+          
+          // Show success message with partial upload info if applicable
+          if (uploadedUrls.length < validFiles.length) {
+            setError(`Successfully uploaded ${uploadedUrls.length} out of ${validFiles.length} images. Some files may have failed due to network issues.`)
+          }
+        } else {
+          setError("No images were uploaded successfully. Please check your internet connection and try again.")
+        }
       } catch (error: any) {
-        clearTimeout(uploadTimeout)
         console.error("Upload error:", error)
-        setError(error.message || "Failed to upload images. Please try again.")
+        
+        // Provide more user-friendly error messages
+        let errorMessage = error.message || "Failed to upload images. Please try again."
+        
+        if (errorMessage.includes("network") || errorMessage.includes("retry")) {
+          errorMessage = "Upload failed due to network issues. Please check your internet connection and try again with smaller files."
+        } else if (errorMessage.includes("permission") || errorMessage.includes("unauthorized")) {
+          errorMessage = "Upload failed due to permission issues. Please refresh the page and try again."
+        } else if (errorMessage.includes("timeout")) {
+          errorMessage = "Upload timed out. Please try with smaller files or check your internet connection."
+        }
+        
+        setError(errorMessage)
       } finally {
         setUploading(false)
       }
@@ -197,7 +213,7 @@ export function ImageUpload({
               <Upload className="h-8 w-8 text-gray-400 mb-2" />
               <p className="text-sm text-gray-600">Drop images here or click to upload</p>
               <p className="text-xs text-gray-500 mt-1">
-                {images.length}/{maxImages} images uploaded
+                {images.length}/{maxImages} images uploaded • Max 5MB per file
               </p>
             </div>
           )}
