@@ -19,6 +19,8 @@
     "clean": "node clean-cache.js",
     "clean:full": "node clean-cache.js && npm cache clean --force",
     "export": "next export",
+    "build:firebase": "next build",
+    "deploy:firebase": "npm run build:firebase && firebase deploy --only hosting",
     "deploy": "npm run build",
     "netlify": "npm run build",
     "deploy:netlify": "node deploy-netlify.js",

@@ -34,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script src="/firebase-init.js" defer></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
