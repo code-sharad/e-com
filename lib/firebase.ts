@@ -14,6 +14,11 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-R8H21DPW4X"
 }
 
+// Validate Firebase configuration
+if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key_here") {
+  console.warn("Firebase configuration is using fallback values. Please set environment variables for production.")
+}
+
 let app: FirebaseApp
 let auth: Auth
 let db: Firestore
