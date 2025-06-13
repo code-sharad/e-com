@@ -30,8 +30,9 @@ import {
   type ExtractedCustomerProfile,
   type DataExtractionFilters 
 } from "@/lib/services/data-extraction"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 
-export default function DataExtractionPage() {
+function DataExtractionPage() {
   const [orders, setOrders] = useState<ExtractedOrderData[]>([])
   const [customers, setCustomers] = useState<ExtractedCustomerProfile[]>([])
   const [selectedOrder, setSelectedOrder] = useState<ExtractedOrderData | null>(null)
@@ -120,22 +121,21 @@ export default function DataExtractionPage() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
-
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
-      order.customerInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerInfo.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())
+      (order.customerInfo?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (order.customerInfo?.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (order.orderNumber?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     
-    const matchesStatus = statusFilter === "all" || order.orderStatus.current === statusFilter
+    const matchesStatus = statusFilter === "all" || order.orderStatus?.current === statusFilter
     
     return matchesSearch && matchesStatus
   })
 
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = 
-      customer.personalInfo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.personalInfo.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (customer.personalInfo?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (customer.personalInfo?.email?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     
     const matchesStatus = statusFilter === "all" || customer.accountInfo?.status === statusFilter
     
@@ -320,8 +320,7 @@ export default function DataExtractionPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto">                  <table className="w-full">
                     <thead>
                       <tr className="border-b">
                         <th className="text-left py-3 px-4 font-medium">Order #</th>
@@ -346,13 +345,15 @@ export default function DataExtractionPage() {
                           <td className="py-3 px-4 text-sm">
                             {order.orderSummary?.itemCount || 0} items
                           </td>
-                          <td className="py-3 px-4 font-medium">                            ₹{(order.orderSummary?.totalAmount || 0).toLocaleString()}
+                          <td className="py-3 px-4 font-medium">
+                            ₹{(order.orderSummary?.totalAmount || 0).toLocaleString()}
                           </td>
                           <td className="py-3 px-4">
                             <Badge variant="outline">
                               {order.orderStatus.current}
                             </Badge>
-                          </td>                          <td className="py-3 px-4 text-sm text-muted-foreground">
+                          </td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground">
                             {order.timestamps?.createdAt?.toLocaleDateString() || 'N/A'}
                           </td>
                           <td className="py-3 px-4">
@@ -411,8 +412,7 @@ export default function DataExtractionPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto">                  <table className="w-full">
                     <thead>
                       <tr className="border-b">
                         <th className="text-left py-3 px-4 font-medium">Customer</th>
@@ -433,16 +433,19 @@ export default function DataExtractionPage() {
                               <p className="text-sm text-muted-foreground">{customer.personalInfo.email}</p>
                             </div>
                           </td>
-                          <td className="py-3 px-4">{customer.orderHistory?.totalOrders || 0}</td>                          <td className="py-3 px-4 font-medium">
+                          <td className="py-3 px-4">{customer.orderHistory?.totalOrders || 0}</td>
+                          <td className="py-3 px-4 font-medium">
                             ₹{(customer.orderHistory?.totalSpent || 0).toLocaleString()}
-                          </td>                          <td className="py-3 px-4">
+                          </td>
+                          <td className="py-3 px-4">
                             ₹{Math.round(customer.orderHistory?.averageOrderValue || 0).toLocaleString()}
                           </td>
                           <td className="py-3 px-4">
                             <Badge variant="outline">
                               {customer.accountInfo?.status || 'N/A'}
                             </Badge>
-                          </td>                          <td className="py-3 px-4 text-sm text-muted-foreground">
+                          </td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground">
                             {customer.accountInfo?.joinDate?.toLocaleDateString() || 'N/A'}
                           </td>
                           <td className="py-3 px-4">
@@ -702,6 +705,18 @@ function CustomerProfileModal({ customer }: { customer: ExtractedCustomerProfile
         </div>
       </div>
     </div>
+  )
+}
+
+function DataExtractionPageContent() {
+  return <DataExtractionPage />
+}
+
+export default function AdminDataExtractionPage() {
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <DataExtractionPageContent />
+    </ProtectedRoute>
   )
 }
 

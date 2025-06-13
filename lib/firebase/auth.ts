@@ -24,8 +24,8 @@ export class FirebaseAuthService {
   // Register new user
   static async register(email: string, password: string, name: string, phone?: string): Promise<UserProfile> {
     try {
-      const auth = await getFirebaseAuth()
-      const db = await getFirestore()
+      const auth = getFirebaseAuth()
+      const db = getFirestore()
       
       // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
@@ -62,8 +62,8 @@ export class FirebaseAuthService {
   // Login user
   static async login(email: string, password: string): Promise<UserProfile> {
     try {
-      const auth = await getFirebaseAuth()
-      const db = await getFirestore()
+      const auth = getFirebaseAuth()
+      const db = getFirestore()
       
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -101,7 +101,7 @@ export class FirebaseAuthService {
   // Logout user
   static async logout(): Promise<void> {
     try {
-      const auth = await getFirebaseAuth()
+      const auth = getFirebaseAuth()
       await signOut(auth)
     } catch (error: unknown) {
       console.error("Logout error:", error)
@@ -112,7 +112,7 @@ export class FirebaseAuthService {
   // Send password reset email
   static async resetPassword(email: string): Promise<void> {
     try {
-      const auth = await getFirebaseAuth()
+      const auth = getFirebaseAuth()
       await sendPasswordResetEmail(auth, email)
     } catch (error: unknown) {
       console.error("Password reset error:", error)
@@ -124,7 +124,7 @@ export class FirebaseAuthService {
   // Get current user profile
   static async getCurrentUserProfile(user: User): Promise<UserProfile | null> {
     try {
-      const db = await getFirestore()
+      const db = getFirestore()
       const userDoc = await getDoc(doc(db, "users", user.uid))
 
       if (!userDoc.exists()) {
@@ -146,7 +146,7 @@ export class FirebaseAuthService {
   // Update user profile
   static async updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {
     try {
-      const db = await getFirestore()
+      const db = getFirestore()
       await setDoc(
         doc(db, "users", uid),
         {

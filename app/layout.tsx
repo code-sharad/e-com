@@ -1,18 +1,72 @@
-'use client'
-
 import type React from "react"
+import type { Metadata, Viewport } from 'next'
 import { Playfair_Display, Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/common/theme-provider"
 import { CartProvider } from "@/components/cart/cart-provider"
 import { AuthProvider } from "@/components/auth/auth-provider"
 import AuthWrapper from "@/components/auth/auth-wrapper"
-import { useEffect } from 'react'
 import { Providers } from '@/components/common/providers'
 import { Toaster } from '@/components/ui/toaster'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { cn } from '@/lib/utils/common'
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Saanvika Ecommerce - Premium Jewelry Collection',
+    template: '%s | Saanvika Ecommerce'
+  },
+  description: 'Discover our exquisite collection of premium jewelry. Quality craftsmanship, timeless designs, and exceptional service.',
+  keywords: ['jewelry', 'ecommerce', 'premium', 'collection', 'gold', 'silver', 'diamonds'],
+  authors: [{ name: 'Saanvika Ecommerce' }],
+  creator: 'Saanvika Ecommerce',
+  publisher: 'Saanvika Ecommerce',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://saanvika-ecommerce.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Saanvika Ecommerce - Premium Jewelry Collection',
+    description: 'Discover our exquisite collection of premium jewelry. Quality craftsmanship, timeless designs, and exceptional service.',
+    url: 'https://saanvika-ecommerce.com',
+    siteName: 'Saanvika Ecommerce',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Saanvika Ecommerce - Premium Jewelry Collection',
+    description: 'Discover our exquisite collection of premium jewelry. Quality craftsmanship, timeless designs, and exceptional service.',
+    creator: '@saanvika',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 
 const playfair = Playfair_Display({
   subsets: ["latin"],

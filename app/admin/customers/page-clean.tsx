@@ -84,6 +84,7 @@ function AdminCustomersContent() {
       }
     }
   }, [isRealTimeEnabled])
+
   const loadCustomers = async () => {
     try {
       setIsLoading(true)
@@ -93,13 +94,9 @@ function AdminCustomersContent() {
       console.log('Loaded customers:', data.length)
       setCustomers(data)
       setLastUpdated(new Date())
-      
-      if (data.length === 0) {
-        setError("No customer data found. This might be because there are no orders or users in the system yet.")
-      }
     } catch (error) {
       console.error("Error loading customers:", error)
-      setError("Failed to load customers. Please check your Firebase configuration and try again.")
+      setError("Failed to load customers. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -276,7 +273,8 @@ function AdminCustomersContent() {
                         <Button onClick={loadCustomers} variant="outline">
                           Refresh
                         </Button>
-                      )}                    </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (

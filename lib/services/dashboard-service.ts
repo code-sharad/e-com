@@ -11,6 +11,7 @@ import {
   QuerySnapshot,
   limit 
 } from 'firebase/firestore'
+import { CustomerService } from './customer-service'
 
 export interface DashboardStats {
   totalProducts: number
@@ -21,6 +22,7 @@ export interface DashboardStats {
   totalRevenue: number
   totalCustomers: number
   activeCustomers: number
+  newCustomersThisMonth?: number
   productsChange: string
   ordersChange: string
   revenueChange: string
@@ -47,33 +49,56 @@ export class DashboardService {
     const percentage = Math.round(change)
     return `${percentage > 0 ? '+' : ''}${percentage}%`
   }
-
   private static async getCustomerStats() {
     try {
-      const db = await this.getDb()
-      const customersRef = collection(db, 'customers')
-      const customersSnapshot = await getDocs(customersRef)
-      const totalCustomers = customersSnapshot.size
+      console.log('Loading customer stats from CustomerService...')
       
-      console.log('Customers loaded:', totalCustomers)
+      // Use the CustomerService to get comprehensive customer data
+      const customers = await CustomerService.getAllCustomers()
+      const totalCustomers = customers.length
       
-      // Count active customers (assuming customers without explicit status are active)
-      const customers = customersSnapshot.docs.map(doc => doc.data()) as any[]
-      const activeCustomers = customers.filter(c => c.status !== 'inactive' && c.status !== 'blocked').length
-
-      // Calculate month-over-month change
+      console.log('Customers loaded via CustomerService:', totalCustomers)
+      
+      // Count active customers
+      const activeCustomers = customers.filter(c => c.status === 'active').length
+      
+      // Count new customers this month
+      const thisMonth = new Date()
+      thisMonth.setDate(1) // First day of current month
+      thisMonth.setHours(0, 0, 0, 0)
+      
+      const newCustomersThisMonth = customers.filter(c => {
+        const joinDate = c.joinDate
+        return joinDate >= thisMonth
+      }).length
+      
+      // Calculate last month's customer count for comparison
       const lastMonth = new Date()
       lastMonth.setMonth(lastMonth.getMonth() - 1)
-      const lastMonthCustomers = customers.filter(c => {
-        const joinDate = c.joinDate instanceof Timestamp ? c.joinDate.toDate() : new Date(c.joinDate || Date.now())
-        return joinDate <= lastMonth
-      })
-      const customersChange = this.calculatePercentageChange(totalCustomers, lastMonthCustomers.length)
+      lastMonth.setDate(1)
+      lastMonth.setHours(0, 0, 0, 0)
+      
+      const customersLastMonth = customers.filter(c => {
+        const joinDate = c.joinDate
+        return joinDate < thisMonth
+      }).length
+      
+      const customersChange = this.calculatePercentageChange(totalCustomers, customersLastMonth)
 
-      return { totalCustomers, activeCustomers, customersChange }
+      return { 
+        totalCustomers, 
+        activeCustomers, 
+        newCustomersThisMonth,
+        customersChange 
+      }
     } catch (error) {
       console.error('Error getting customer stats:', error)
-      return { totalCustomers: 0, activeCustomers: 0, customersChange: '+0%' }
+      return { 
+        totalCustomers: 0, 
+        activeCustomers: 0, 
+        newCustomersThisMonth: 0,
+        customersChange: '+0%' 
+      }
     }
   }
 
@@ -113,9 +138,7 @@ export class DashboardService {
 
       const productsChange = this.calculatePercentageChange(totalProducts, totalProducts - 1) // Simple calculation
       const ordersChange = this.calculatePercentageChange(totalOrders, lastMonthOrders.length)
-      const revenueChange = this.calculatePercentageChange(totalRevenue, lastMonthRevenue)
-
-      // Get customer stats
+      const revenueChange = this.calculatePercentageChange(totalRevenue, lastMonthRevenue)      // Get customer stats
       const customerStats = await this.getCustomerStats()
 
       const stats = {
@@ -127,6 +150,7 @@ export class DashboardService {
         totalRevenue,
         totalCustomers: customerStats.totalCustomers,
         activeCustomers: customerStats.activeCustomers,
+        newCustomersThisMonth: customerStats.newCustomersThisMonth,
         productsChange,
         ordersChange,
         revenueChange,
@@ -207,11 +231,9 @@ export class DashboardService {
       return []
     }
   }
-
   static async subscribeToRealtimeStats(callback: (stats: Partial<DashboardStats>) => void): Promise<() => void> {
     const db = await this.getDb()
     const ordersRef = collection(db, 'orders')
-    const customersRef = collection(db, 'customers')
     const unsubscribers: (() => void)[] = []
 
     // Subscribe to orders changes
@@ -229,21 +251,30 @@ export class DashboardService {
     })
     unsubscribers.push(unsubscribeOrders)
 
-    // Subscribe to customers changes (with error handling)
+    // Subscribe to customer changes using CustomerService
     try {
-      const unsubscribeCustomers = onSnapshot(customersRef, (snapshot: QuerySnapshot) => {
-        const totalCustomers = snapshot.size
-        const customers = snapshot.docs.map(doc => doc.data()) as any[]
-        const activeCustomers = customers.filter((c: any) => c.status !== 'inactive' && c.status !== 'blocked').length
+      const unsubscribeCustomers = CustomerService.subscribeToCustomers(async (customers) => {
+        const totalCustomers = customers.length
+        const activeCustomers = customers.filter(c => c.status === 'active').length
+        
+        // Calculate new customers this month
+        const thisMonth = new Date()
+        thisMonth.setDate(1)
+        thisMonth.setHours(0, 0, 0, 0)
+        
+        const newCustomersThisMonth = customers.filter(c => {
+          return c.joinDate >= thisMonth
+        }).length
 
         callback({
           totalCustomers,
-          activeCustomers
+          activeCustomers,
+          newCustomersThisMonth
         })
       })
       unsubscribers.push(unsubscribeCustomers)
     } catch (error) {
-      console.log('Could not subscribe to customers collection:', error)
+      console.log('Could not subscribe to customer updates:', error)
     }
 
     // Return unsubscribe function that cleans up all subscriptions

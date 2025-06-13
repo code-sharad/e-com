@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"
-import type { Auth } from "firebase/auth"
-import type { Firestore } from "firebase/firestore"
-import type { FirebaseStorage } from "firebase/storage"
+import { getAuth, type Auth } from "firebase/auth"
+import { getFirestore as getFirestoreDb, connectFirestoreEmulator, enableNetwork, type Firestore } from "firebase/firestore"
+import { getStorage as getFirebaseStorageInstance, type FirebaseStorage } from "firebase/storage"
 
 // Your Firebase configuration
 const firebaseConfig = {
@@ -28,9 +28,8 @@ function initializeFirebaseApp() {
 }
 
 // Function to get Firebase Auth instance
-export const getFirebaseAuth = async () => {
+export const getFirebaseAuth = () => {
   if (!auth) {
-    const { getAuth } = await import("firebase/auth")
     const firebaseApp = initializeFirebaseApp()
     auth = getAuth(firebaseApp)
   }
@@ -38,18 +37,18 @@ export const getFirebaseAuth = async () => {
 }
 
 // Function to get Firestore instance
-export const getFirestore = async () => {
+export const getFirestore = () => {
   if (!db) {
-    const { getFirestore: getFirestoreDb, connectFirestoreEmulator } = await import("firebase/firestore")
     const firebaseApp = initializeFirebaseApp()
     db = getFirestoreDb(firebaseApp)
     
     // Set timeout settings for Firestore operations
     if (typeof window !== "undefined") {
       // Client-side timeout settings
-      const { enableNetwork } = await import("firebase/firestore")
       try {
-        await enableNetwork(db)
+        enableNetwork(db).catch(error => {
+          console.warn("Firestore network enable failed:", error)
+        })
       } catch (error) {
         console.warn("Firestore network enable failed:", error)
       }
@@ -59,9 +58,8 @@ export const getFirestore = async () => {
 }
 
 // Function to get Storage instance
-export const getFirebaseStorage = async () => {
+export const getFirebaseStorage = () => {
   if (!storage) {
-    const { getStorage: getFirebaseStorageInstance } = await import("firebase/storage")
     const firebaseApp = initializeFirebaseApp()
     storage = getFirebaseStorageInstance(firebaseApp)
   }
@@ -76,10 +74,13 @@ export const isUsingDemoConfig = !isFirebaseConfigured
 export const preloadFirebase = () => {
   if (typeof window === "undefined") return Promise.resolve()
   
-  return Promise.all([
-    import("firebase/auth"),
-    import("firebase/firestore"),
-    import("firebase/storage")
-  ])
+  // Firebase modules are now imported statically, so just initialize
+  try {
+    initializeFirebaseApp()
+    return Promise.resolve()
+  } catch (error) {
+    console.warn("Firebase preload failed:", error)
+    return Promise.reject(error)
+  }
 }
 

@@ -4,7 +4,7 @@ import React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Package, Users, ShoppingCart, TrendingUp, Plus, BarChart3, Activity, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import { Package, Users, ShoppingCart, TrendingUp, Plus, BarChart3, Activity, Clock, CheckCircle, AlertCircle, RefreshCw } from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { DashboardService, type DashboardStats, type RecentActivity } from "@/lib/services/dashboard-service"
 
@@ -12,6 +12,8 @@ function AdminDashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined
@@ -31,9 +33,11 @@ function AdminDashboardContent() {
         // Set up real-time updates
         unsubscribe = await DashboardService.subscribeToRealtimeStats((updatedStats) => {
           setStats(prevStats => prevStats ? { ...prevStats, ...updatedStats } : updatedStats as DashboardStats)
+          setLastUpdated(new Date())
         })
       } catch (error) {
         console.error('Error loading dashboard data:', error)
+        setError('Failed to load dashboard data. Please refresh to try again.')
       } finally {
         setIsLoading(false)
       }
@@ -47,6 +51,21 @@ function AdminDashboardContent() {
       }
     }
   }, [])
+
+  const refreshDashboard = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const refreshedStats = await DashboardService.getDashboardStats()
+      setStats(refreshedStats)
+      setLastUpdated(new Date())
+    } catch (error) {
+      console.error('Error refreshing dashboard data:', error)
+      setError('Failed to refresh dashboard data.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -106,9 +125,25 @@ function AdminDashboardContent() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="hidden md:flex items-center space-x-2 text-sm text-muted-foreground">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Live Dashboard</span>
+              <div className="hidden md:flex items-center space-x-4 text-sm text-muted-foreground">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Live Dashboard</span>
+                </div>
+                {lastUpdated && (
+                  <div className="text-xs">
+                    Last updated: {lastUpdated.toLocaleTimeString()}
+                  </div>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={refreshDashboard}
+                  disabled={isLoading}
+                  className="h-8 w-8 p-0"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
               <Link href="/admin/products/new">
                 <Button className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-black shadow-lg hover:shadow-xl transition-all duration-200">
@@ -131,6 +166,25 @@ function AdminDashboardContent() {
             Monitor your jewelry business performance, manage products, and track orders all in one place.
           </p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+              <p className="text-red-700">{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshDashboard}
+                className="ml-auto"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Enhanced Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -208,11 +262,18 @@ function AdminDashboardContent() {
             </div>
           </div>
 
-          <div className="group bg-gradient-to-br from-card via-card to-card/80 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gold-200/20 hover:border-gold-300/40">
+          <div className="group bg-gradient-to-br from-card via-card to-card/80 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gold-200/20 hover:border-gold-300/40 relative">
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Customers</p>
-                <p className="text-3xl font-bold text-foreground">{stats?.totalCustomers || 0}</p>
+                <p className="text-3xl font-bold text-foreground">
+                  {stats?.totalCustomers?.toLocaleString() || 0}
+                </p>
                 <div className="flex items-center space-x-2">
                   <div className="flex items-center text-sm text-green-600">
                     <TrendingUp className="h-4 w-4 mr-1" />
@@ -220,13 +281,18 @@ function AdminDashboardContent() {
                   </div>
                   <span className="text-xs text-muted-foreground">from last month</span>
                 </div>
+                {stats?.newCustomersThisMonth !== undefined && (
+                  <div className="text-xs text-muted-foreground bg-blue-50 px-2 py-1 rounded-md inline-block">
+                    +{stats.newCustomersThisMonth} new this month
+                  </div>
+                )}
               </div>
               <div className="relative">
                 <div className="w-16 h-16 bg-purple-500/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                   <Users className="h-8 w-8 text-purple-600" />
                 </div>
                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-bold text-white">+</span>
+                  <span className="text-xs font-bold text-white">{stats?.activeCustomers || 0}</span>
                 </div>
               </div>
             </div>
@@ -270,6 +336,84 @@ function AdminDashboardContent() {
               </div>
               <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
                 <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Analytics Section */}
+        <div className="bg-gradient-to-br from-card via-card/95 to-card/90 rounded-xl p-6 shadow-lg border border-purple-200/30 relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
+              <div className="text-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-2" />
+                <p className="text-sm text-purple-600">Updating customer data...</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-serif text-xl font-bold text-foreground">Customer Insights</h3>
+              <p className="text-sm text-muted-foreground">Real-time customer analytics and trends</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {lastUpdated && (
+                <span className="text-xs text-muted-foreground">
+                  Updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+              <Link href="/admin/customers">
+                <Button variant="outline" size="sm" className="hover:bg-purple-50">
+                  <Users className="h-4 w-4 mr-2" />
+                  View All Customers
+                </Button>
+              </Link>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-950/50 dark:to-purple-900/30 rounded-lg p-4 border border-purple-200/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-800 dark:text-purple-200">Total Customers</p>
+                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                    {stats?.totalCustomers?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-xs text-purple-700 dark:text-purple-300">Registered users</p>
+                </div>
+                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                  <Users className="h-5 w-5 text-purple-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-950/50 dark:to-green-900/30 rounded-lg p-4 border border-green-200/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">Active Customers</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                    {stats?.activeCustomers?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-300">Recently active</p>
+                </div>
+                <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                  <Activity className="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">New This Month</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                    {stats?.newCustomersThisMonth?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">Growth metric</p>
+                </div>
+                <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                </div>
               </div>
             </div>
           </div>

@@ -1,15 +1,13 @@
 // Firebase initialization with error handling
 if (typeof window !== 'undefined') {
   // Client-side initialization
+  console.log('✅ Firebase initialization script loaded');
+  
+  // Firebase modules are now statically imported in the main application
+  // This script is for monitoring purposes only
   window.addEventListener('load', () => {
     try {
-      // Preload Firebase modules
-      import('./lib/firebase').then(firebase => {
-        console.log('✅ Firebase SDK loaded successfully');
-        firebase.preloadFirebase().catch(console.warn);
-      }).catch(error => {
-        console.error('❌ Firebase SDK loading failed:', error);
-      });
+      console.log('✅ Page loaded, Firebase should be available');
     } catch (error) {
       console.error('❌ Firebase initialization error:', error);
     }

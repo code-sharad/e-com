@@ -442,9 +442,8 @@ export class DataExtractionService {
         name: customer.name,
         email: customer.email,
         phone: customer.phone
-      },
-      address: {
-        primary: customer.address,
+      },      address: {
+        primary: customer.address?.full,
         shipping: []
       },
       accountInfo: {
