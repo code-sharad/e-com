@@ -5,39 +5,42 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Package, Users, ShoppingCart, TrendingUp, Plus, BarChart3, Activity, Clock, CheckCircle, AlertCircle } from "lucide-react"
-import { ProtectedRoute } from "@/components/protected-route"
-import { DashboardService, type DashboardStats, type RecentActivity } from "@/lib/dashboard-service"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { DashboardService, type DashboardStats, type RecentActivity } from "@/lib/services/dashboard-service"
 
 function AdminDashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    let unsubscribe: (() => void) | null = null
+    let unsubscribe: (() => void) | undefined
 
-    const loadDashboardData = async () => {
+    const loadInitialData = async () => {
       try {
-        // Load initial data
-        const [dashboardStats, activity] = await Promise.all([
-          DashboardService.getDashboardStats(),
-          DashboardService.getRecentActivity(8),
-        ])
-
-        setStats(dashboardStats)
+        setIsLoading(true)
+        
+        // Load initial stats
+        const initialStats = await DashboardService.getDashboardStats()
+        setStats(initialStats)
+        
+        // Load recent activity
+        const activity = await DashboardService.getRecentActivity()
         setRecentActivity(activity)
-
+        
         // Set up real-time updates
-        unsubscribe = DashboardService.subscribeToRealtimeStats((updatedStats) => {
-          setStats(prevStats => prevStats ? { ...prevStats, ...updatedStats } : null)
+        unsubscribe = await DashboardService.subscribeToRealtimeStats((updatedStats) => {
+          setStats(prevStats => prevStats ? { ...prevStats, ...updatedStats } : updatedStats as DashboardStats)
         })
       } catch (error) {
-        console.error("Error loading dashboard data:", error)
+        console.error('Error loading dashboard data:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    loadDashboardData()
+    loadInitialData()
 
-    // Cleanup on unmount
     return () => {
       if (unsubscribe) {
         unsubscribe()
@@ -309,21 +312,48 @@ function AdminDashboardContent() {
 
               <Link href="/admin/orders">
                 <div className="group bg-gradient-to-br from-card via-card/95 to-card/90 rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gold-200/30 hover:border-gold-400/50 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-gold-500/5 via-transparent to-gold-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-green-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <div className="relative">
                     <div className="flex items-start space-x-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                         <ShoppingCart className="h-7 w-7 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-serif text-xl font-bold text-foreground mb-2 group-hover:text-blue-600 transition-colors">
-                          View Orders
+                        <h3 className="font-serif text-xl font-bold text-foreground mb-2 group-hover:text-green-600 transition-colors">
+                          Manage Orders
                         </h3>
                         <p className="text-muted-foreground text-sm leading-relaxed">
-                          Track and manage customer orders. Update order status and handle customer requests.
+                          Process and track customer orders, update order status, and manage shipping details.
+                        </p>
+                        <div className="mt-4 flex items-center text-sm text-green-600 group-hover:text-green-700">
+                          <span className="font-medium">View Orders</span>
+                          <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/admin/customers">
+                <div className="group bg-gradient-to-br from-card via-card/95 to-card/90 rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gold-200/30 hover:border-gold-400/50 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <Users className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-serif text-xl font-bold text-foreground mb-2 group-hover:text-blue-600 transition-colors">
+                          Manage Customers
+                        </h3>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                          View customer profiles, track purchase history, and manage customer relationships.
                         </p>
                         <div className="mt-4 flex items-center text-sm text-blue-600 group-hover:text-blue-700">
-                          <span className="font-medium">Manage Orders</span>
+                          <span className="font-medium">View Customers</span>
                           <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
@@ -335,7 +365,7 @@ function AdminDashboardContent() {
               </Link>
 
               <Link href="/admin/reports">
-                <div className="group bg-gradient-to-br from-card via-card/95 to-card/90 rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gold-200/30 hover:border-gold-400/50 relative overflow-hidden md:col-span-2">
+                <div className="group bg-gradient-to-br from-card via-card/95 to-card/90 rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gold-200/30 hover:border-gold-400/50 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <div className="relative">
                     <div className="flex items-start space-x-4">
@@ -351,6 +381,33 @@ function AdminDashboardContent() {
                         </p>
                         <div className="mt-4 flex items-center text-sm text-purple-600 group-hover:text-purple-700">
                           <span className="font-medium">View Reports</span>
+                          <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/admin/data-extraction">
+                <div className="group bg-gradient-to-br from-card via-card/95 to-card/90 rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-gold-200/30 hover:border-gold-400/50 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-transparent to-teal-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <BarChart3 className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-serif text-xl font-bold text-foreground mb-2 group-hover:text-teal-600 transition-colors">
+                          Data Extraction
+                        </h3>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                          Extract detailed order and customer profile information for analysis, export data in CSV/JSON formats.
+                        </p>
+                        <div className="mt-4 flex items-center text-sm text-teal-600 group-hover:text-teal-700">
+                          <span className="font-medium">Extract Data</span>
                           <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
@@ -443,6 +500,9 @@ function AdminDashboardContent() {
   )
 }
 
+// Force dynamic rendering for admin pages that require authentication
+export const dynamic = 'force-dynamic'
+
 export default function AdminDashboard() {
   return (
     <ProtectedRoute requireAdmin={true}>
@@ -450,3 +510,4 @@ export default function AdminDashboard() {
     </ProtectedRoute>
   )
 }
+

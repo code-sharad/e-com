@@ -1,25 +1,17 @@
 import React from 'react'
-import { ProtectedRoute } from '@/components/protected-route'
+import { ProtectedRoute } from '@/components/auth/protected-route'
 import AdminEditClient from './admin-edit-client'
 
-// Add generateStaticParams for static export
-export async function generateStaticParams() {
-  // Use the same product IDs as the main product pages for consistency
-  return [
-    { id: 'fSSjDZrFsLmIDLV5F4Sy' },
-    { id: 'K0LN8pHbtKM6NK6rYGCB' },
-    // Fallback placeholder IDs for development
-    { id: 'product1' },
-    { id: 'product2' },
-    { id: 'product3' },
-  ]
-}
+// Force dynamic rendering for admin pages that require authentication
+export const dynamic = 'force-dynamic'
 
 // This is a placeholder for the admin edit product page
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   return (
     <ProtectedRoute requireAdmin={true}>
-      <AdminEditClient id={params.id} />
+      <AdminEditClient id={id} />
     </ProtectedRoute>
   )
 }

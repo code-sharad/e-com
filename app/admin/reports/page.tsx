@@ -3,7 +3,7 @@
 import React from "react"
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { ProtectedRoute } from "@/components/protected-route"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,37 +67,74 @@ function AdminReportsContent() {
       // Calculate summary statistics
       const totalRevenue = filteredOrders
         .filter(order => order.status === 'delivered')
-        .reduce((sum, order) => sum + order.total, 0)
+        .reduce((sum, order) => sum + order.totalAmount, 0)
       
       const totalOrders = filteredOrders.length
       const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
 
-      // Calculate top selling products
-      const productStats = new Map<string, { name: string; quantity: number; revenue: number }>()
-      
-      filteredOrders
+      // Calculate revenue by category
+      const revenueByCategory = filteredOrders
         .filter(order => order.status === 'delivered')
-        .forEach(order => {
+        .reduce((acc, order) => {
           order.items.forEach(item => {
-            const existing = productStats.get(item.productId) || { 
-              name: item.productName, 
-              quantity: 0, 
-              revenue: 0 
-            }
-            existing.quantity += item.quantity
-            existing.revenue += item.price * item.quantity
-            productStats.set(item.productId, existing)
+            const category = 'Uncategorized' // We don't have category in OrderItem
+            acc[category] = (acc[category] || 0) + (item.price * item.quantity)
           })
-        })
+          return acc
+        }, {} as Record<string, number>)
 
-      const topSellingProducts = Array.from(productStats.values())
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 5)
-        .map(product => ({
+      // Calculate revenue by payment method
+      const revenueByPaymentMethod = filteredOrders
+        .filter(order => order.status === 'delivered')
+        .reduce((acc, order) => {
+          const method = order.paymentMethod
+          acc[method] = (acc[method] || 0) + order.totalAmount
+          return acc
+        }, {} as Record<string, number>)
+
+      // Calculate revenue by status
+      const revenueByStatus = filteredOrders.reduce((acc, order) => {
+        const status = order.status
+        acc[status] = (acc[status] || 0) + order.totalAmount
+        return acc
+      }, {} as Record<string, number>)
+
+      // Calculate daily revenue
+      const dailyRevenue = filteredOrders
+        .filter(order => order.status === 'delivered')
+        .reduce((acc, order) => {
+          const date = new Date(order.createdAt).toISOString().split('T')[0]
+          acc[date] = (acc[date] || 0) + order.totalAmount
+          return acc
+        }, {} as Record<string, number>)
+
+      // Calculate top products
+      const topProducts = filteredOrders
+        .filter(order => order.status === 'delivered')
+        .reduce((acc, order) => {
+          order.items.forEach(item => {
+            if (!acc[item.productId]) {
+              acc[item.productId] = {
+                name: item.productName,
+                revenue: 0,
+                quantity: 0
+              }
+            }
+            acc[item.productId].revenue += item.price * item.quantity
+            acc[item.productId].quantity += item.quantity
+          })
+          return acc
+        }, {} as Record<string, { name: string; revenue: number; quantity: number }>)
+
+      // Calculate top selling products
+      const topSellingProducts = Object.entries(topProducts)
+        .map(([_, product]) => ({
           productName: product.name,
           quantitySold: product.quantity,
           revenue: product.revenue
         }))
+        .sort((a, b) => b.quantitySold - a.quantitySold)
+        .slice(0, 5)
 
       // Calculate monthly revenue (last 6 months)
       const monthlyData = new Map<string, { revenue: number; orders: number }>()
@@ -116,7 +153,7 @@ function AdminReportsContent() {
           const monthKey = orderDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
           const existing = monthlyData.get(monthKey)
           if (existing) {
-            existing.revenue += order.total
+            existing.revenue += order.totalAmount
             existing.orders += 1
           }
         })
@@ -133,7 +170,11 @@ function AdminReportsContent() {
           totalOrders,
           averageOrderValue,
           topSellingProducts,
-          revenueByCategory: [], // Would need product categories
+          revenueByCategory: Object.entries(revenueByCategory).map(([category, revenue]) => ({
+            category,
+            revenue,
+            percentage: (revenue / totalRevenue) * 100
+          })),
           monthlyRevenue
         },
         orders: filteredOrders,
@@ -175,15 +216,15 @@ function AdminReportsContent() {
     try {
       // Create CSV content
       const csvHeaders = ['Order ID', 'Customer Name', 'Customer Email', 'Items', 'Total', 'Status', 'Payment Method', 'Date']
-      const csvRows = reportData.orders.map(order => [
-        order.id,
-        order.customerName,
-        order.customerEmail,
-        order.items.map(item => `${item.productName} (${item.quantity})`).join('; '),
-        order.total.toString(),
-        order.status,
-        order.paymentMethod,
-        new Date(order.createdAt).toLocaleDateString()
+      const csvRows = (reportData?.orders || []).map(order => [
+        order?.id || 'N/A',
+        order?.customerName || 'N/A',
+        order?.customerEmail || 'N/A',
+        (order?.items || []).map(item => `${item?.productName || 'N/A'} (${item?.quantity || 0})`).join('; '),
+        order?.totalAmount?.toString() || '0',
+        order?.status || 'N/A',
+        order?.paymentMethod || 'N/A',
+        order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'
       ])
 
       const csvContent = [csvHeaders, ...csvRows]
@@ -248,19 +289,19 @@ function AdminReportsContent() {
           <div class="summary">
             <div class="summary-card">
               <h3>Total Revenue</h3>
-              <p>₹${reportData.summary.totalRevenue.toLocaleString()}</p>
+              <p>₹${reportData?.summary?.totalRevenue?.toLocaleString() || '0'}</p>
             </div>
             <div class="summary-card">
               <h3>Total Orders</h3>
-              <p>${reportData.summary.totalOrders}</p>
+              <p>${reportData?.summary?.totalOrders || 0}</p>
             </div>
             <div class="summary-card">
               <h3>Average Order Value</h3>
-              <p>₹${Math.round(reportData.summary.averageOrderValue).toLocaleString()}</p>
+              <p>₹${Math.round(reportData?.summary?.averageOrderValue || 0).toLocaleString()}</p>
             </div>
             <div class="summary-card">
               <h3>Top Product</h3>
-              <p>${reportData.summary.topSellingProducts[0]?.productName || 'N/A'}</p>
+              <p>${reportData?.summary?.topSellingProducts?.[0]?.productName || 'N/A'}</p>
             </div>
           </div>
 
@@ -277,14 +318,14 @@ function AdminReportsContent() {
               </tr>
             </thead>
             <tbody>
-              ${reportData.orders.slice(0, 20).map(order => `
+              ${(reportData?.orders || []).slice(0, 20).map(order => `
                 <tr>
-                  <td>${order.id}</td>
-                  <td>${order.customerName}<br><small>${order.customerEmail}</small></td>
-                  <td>${order.items.map(item => `${item.productName} (${item.quantity})`).join('<br>')}</td>
-                  <td class="text-right">₹${order.total.toLocaleString()}</td>
-                  <td>${order.status}</td>
-                  <td>${new Date(order.createdAt).toLocaleDateString()}</td>
+                  <td>${order?.id || 'N/A'}</td>
+                  <td>${order?.customerName || 'N/A'}<br><small>${order?.customerEmail || 'N/A'}</small></td>
+                  <td>${(order?.items || []).map(item => `${item?.productName || 'N/A'} (${item?.quantity || 0})`).join('<br>')}</td>
+                  <td class="text-right">₹${order?.totalAmount?.toLocaleString() || '0'}</td>
+                  <td>${order?.status || 'N/A'}</td>
+                  <td>${order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -441,9 +482,9 @@ function AdminReportsContent() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{reportData.summary.totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">₹{reportData?.summary?.totalRevenue?.toLocaleString() || '0'}</div>
               <p className="text-xs text-muted-foreground">
-                {reportData.dateRange.from ? "For selected period" : "All time"}
+                {reportData?.dateRange?.from ? "For selected period" : "All time"}
               </p>
             </CardContent>
           </Card>
@@ -454,7 +495,7 @@ function AdminReportsContent() {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{reportData.summary.totalOrders}</div>
+              <div className="text-2xl font-bold">{reportData?.summary?.totalOrders || 0}</div>
               <p className="text-xs text-muted-foreground">Orders processed</p>
             </CardContent>
           </Card>
@@ -466,7 +507,7 @@ function AdminReportsContent() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ₹{Math.round(reportData.summary.averageOrderValue).toLocaleString()}
+                ₹{Math.round(reportData?.summary?.averageOrderValue || 0).toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">Per order average</p>
             </CardContent>
@@ -502,7 +543,7 @@ function AdminReportsContent() {
                       <p className="text-xs text-muted-foreground">{product.quantitySold} units sold</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">₹{product.revenue.toLocaleString()}</p>
+                      <p className="font-medium">₹{product?.revenue?.toLocaleString() || '0'}</p>
                     </div>
                   </div>
                 ))}
@@ -530,8 +571,8 @@ function AdminReportsContent() {
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="font-medium">₹{category.revenue.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">{category.percentage.toFixed(1)}%</p>
+                      <p className="font-medium">₹{category?.revenue?.toLocaleString() || '0'}</p>
+                      <p className="text-xs text-muted-foreground">{category?.percentage?.toFixed(1) || '0.0'}%</p>
                     </div>
                   </div>
                 ))}
@@ -578,10 +619,10 @@ function AdminReportsContent() {
                           ))}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right font-medium">₹{order.total.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right font-medium">₹{order?.totalAmount?.toLocaleString() || '0'}</td>
                       <td className="py-3 px-4">{getStatusBadge(order.status)}</td>
                       <td className="py-3 px-4 text-sm text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        {order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
                     </tr>
                   ))}
@@ -595,6 +636,9 @@ function AdminReportsContent() {
   )
 }
 
+// Force dynamic rendering for admin pages that require authentication
+export const dynamic = 'force-dynamic'
+
 export default function AdminReportsPage() {
   return (
     <ProtectedRoute requireAdmin={true}>
@@ -602,3 +646,4 @@ export default function AdminReportsPage() {
     </ProtectedRoute>
   )
 }
+

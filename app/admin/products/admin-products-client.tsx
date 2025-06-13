@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Edit, Trash2, Eye, MoreHorizontal, Package, Filter } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { FirebaseProductsService, type Product } from "@/lib/firebase/products"
+import { ProductService, type Product } from "@/lib/firebase/products"
 
 export default function AdminProductsClient() {
   const { user } = useAuth()
@@ -27,7 +27,7 @@ export default function AdminProductsClient() {
   const loadProducts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const { products: allProducts } = await FirebaseProductsService.getProducts()
+      const { products: allProducts } = await ProductService.getProducts()
       setProducts(allProducts)
     } catch (error) {
       console.error("Error loading products:", error)
@@ -80,16 +80,29 @@ export default function AdminProductsClient() {
     setSelectedStatus("all")
     setPriceRange({ min: "", max: "" })
   }
-
   const handleDeleteProduct = async (productId: string) => {
+    console.log('Attempting to delete product with ID:', productId)
+    
+    if (!productId) {
+      alert("Product ID is missing. Cannot delete product.")
+      return
+    }
+    
     if (!confirm("Are you sure you want to delete this product?")) return
 
     try {
-      await FirebaseProductsService.deleteProduct(productId)
-      loadProducts() // Reload products after deletion
+      console.log('Calling ProductService.deleteProduct with ID:', productId)
+      await ProductService.deleteProduct(productId)
+      console.log('Product deleted successfully, reloading products...')
+      
+      // Show success message
+      alert("Product deleted successfully!")
+      
+      // Reload products after deletion
+      await loadProducts() 
     } catch (error) {
       console.error("Error deleting product:", error)
-      alert("Failed to delete product. Please try again.")
+      alert(`Failed to delete product. Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -175,14 +188,14 @@ export default function AdminProductsClient() {
           <div className="flex items-center space-x-2">
             <Input
               type="number"
-              placeholder="Min $"
+              placeholder="Min ₹"
               value={priceRange.min}
               onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
               className="w-1/2"
             />
             <Input
               type="number"
-              placeholder="Max $"
+              placeholder="Max ₹"
               value={priceRange.max}
               onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
               className="w-1/2"
@@ -237,10 +250,10 @@ export default function AdminProductsClient() {
                       <Button asChild variant="link" className="mt-2">
                         <Link href="/admin/products/new">Add your first product</Link>
                       </Button>
-                    )}
-                  </td>
+                    )}                  </td>
                 </tr>
-              ) : (                productsToDisplay.map((product) => (
+              ) : (
+                productsToDisplay.map((product) => (
                   <tr key={product.id} className="border-t border-border hover:bg-muted/50">
                     <td className="px-4 py-3">
                       <div className="flex items-center">
@@ -268,7 +281,7 @@ export default function AdminProductsClient() {
                     <td className="px-4 py-3">
                       <Badge variant="outline">{product.category}</Badge>
                     </td>
-                    <td className="px-4 py-3">${product.price.toFixed(2)}</td>
+                    <td className="px-4 py-3">₹{product.price.toFixed(2)}</td>
                     <td className="px-4 py-3">{product.stockQuantity}</td>
                     <td className="px-4 py-3">
                       {product.stockQuantity > 5 ? (
@@ -280,35 +293,48 @@ export default function AdminProductsClient() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/product/${product.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/products/edit/${product.id}`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => product.id && handleDeleteProduct(product.id)}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Link href={`/admin/products/edit/${product.id}`}>
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Link>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/product/${product.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                console.log('Delete clicked for product:', product.id, product.name)
+                                if (product.id) {
+                                  handleDeleteProduct(product.id)
+                                } else {
+                                  alert("Product ID is missing. Cannot delete product.")
+                                }
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -320,3 +346,4 @@ export default function AdminProductsClient() {
     </div>
   )
 }
+

@@ -1,6 +1,9 @@
 // Component memoized for performance (6.12KB)
 import React from "react"
-import { auth, db, storage } from '@/lib/firebase'
+import { getFirestore as getFirestoreApp } from '@/lib/firebase'
+import { getAuth } from 'firebase/auth'
+import { getStorage } from 'firebase/storage'
+import { doc, getFirestore } from 'firebase/firestore'
 // Emulator imports commented out as they're not currently used
 // import { connectAuthEmulator, connectFirestoreEmulator, connectStorageEmulator } from 'firebase/auth'
 
@@ -20,9 +23,9 @@ export class FirebaseValidator {
     overall: boolean
   } {
     const result = {
-      auth: !!auth,
-      firestore: !!db,
-      storage: !!storage,
+      auth: !!getAuth(),
+      firestore: !!getFirestore(),
+      storage: !!getStorage(),
       overall: false
     }
     
@@ -74,7 +77,7 @@ export class FirebaseValidator {
 
     try {
       // Test auth state listener
-      const unsubscribe = auth.onAuthStateChanged(() => {
+      const unsubscribe = getAuth().onAuthStateChanged(() => {
         result.authStateDetected = true
         unsubscribe()
       })      // Note: We don't test anonymous sign-in in production
@@ -108,7 +111,7 @@ export class FirebaseValidator {
     try {
       // Test if we can create a document reference
       const { doc } = await import('firebase/firestore')
-      const testDoc = doc(db, 'test', 'connection')
+      const testDoc = doc(getFirestore(), 'test', 'connection')
       result.canConnect = !!testDoc
 
       // Note: We don't actually write in production without auth
@@ -142,7 +145,7 @@ export class FirebaseValidator {
     try {
       // Test if we can create a storage reference
       const { ref } = await import('firebase/storage')
-      const testRef = ref(storage, 'test/connection.txt')
+      const testRef = ref(getStorage(), 'test/connection.txt')
       result.canConnect = !!testRef
 
       // Note: We don't actually upload in production without auth
@@ -205,10 +208,79 @@ export class FirebaseValidator {
 
 // Helper function to validate Firebase setup on app startup
 export const validateFirebaseSetup = () => {
-  if (typeof window !== 'undefined') {
-    // Only run in browser
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    // Only run in browser and development mode
     setTimeout(() => {
       FirebaseValidator.runFullValidation()
     }, 1000)
   }
 }
+
+// Validate Firebase configuration
+export async function validateFirebaseConfig() {
+  try {
+    const auth = getAuth()
+    const db = getFirestore()
+    const storage = getStorage()
+
+    // Check if Firebase is initialized
+    if (!auth || !db || !storage) {
+      throw new Error('Firebase services not initialized')
+    }
+
+    // Test auth state listener
+    const authPromise = new Promise<void>((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged(() => {
+        unsubscribe()
+        resolve()
+      })
+    })
+
+    // Check if environment variables are set
+    const requiredEnvVars = [
+      'NEXT_PUBLIC_FIREBASE_API_KEY',
+      'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
+      'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+      'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
+      'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+      'NEXT_PUBLIC_FIREBASE_APP_ID'
+    ]
+
+    const missingEnvVars = requiredEnvVars.filter(
+      varName => !process.env[varName]
+    )
+
+    if (missingEnvVars.length > 0) {
+      throw new Error(
+        `Missing required environment variables: ${missingEnvVars.join(', ')}`
+      )
+    }
+
+    // Wait for auth check
+    await authPromise
+
+    // Test if we can create a document reference
+    const testDoc = doc(db, 'test', 'connection')
+
+    // Test if we can create a storage reference
+    const { ref } = await import('firebase/storage')
+    const testRef = ref(storage, 'test/connection.txt')
+
+    // If we get here, all checks passed
+    return {
+      auth: true,
+      firestore: !!testDoc,
+      storage: !!testRef,
+      overall: true
+    }
+  } catch (error) {
+    console.error('Firebase validation error:', error)
+    return {
+      auth: false,
+      firestore: false,
+      storage: false,
+      overall: false
+    }
+  }
+}
+

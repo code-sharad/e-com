@@ -3,11 +3,11 @@
 import React from "react"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
-import { useCart } from "@/components/cart-provider"
-import { useAuth } from "@/components/auth-provider"
-import AuthLoading from "@/components/auth-loading"
+import Navbar from "@/components/common/navbar"
+import Footer from "@/components/common/footer"
+import { useCart } from "@/components/cart/cart-provider"
+import { useAuth } from "@/components/auth/auth-provider"
+import AuthLoading from "@/components/auth/auth-loading"
 import CheckoutContent from "./checkout-content"
 
 export default function CheckoutPageOptimized() {
@@ -59,3 +59,5 @@ export default function CheckoutPageOptimized() {
     </div>
   )
 }
+
+

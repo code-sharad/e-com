@@ -2,14 +2,14 @@
 import React from "react"
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
-import ProductCard from "@/components/product-card"
-import SearchBar from "@/components/search-bar"
+import Navbar from "@/components/common/navbar"
+import Footer from "@/components/common/footer"
+import ProductCard from "@/components/product/product-card"
+import SearchBar from "@/components/common/search-bar"
 import { Search } from "lucide-react"
-import { FirebaseProductsService, type Product } from "@/lib/firebase/products"
+import { ProductService, type Product } from "@/lib/firebase/products"
 
 interface DisplayProduct {
   id: string
@@ -31,12 +31,12 @@ function SearchContent() {
   useEffect(() => {
     const loadAllProducts = async () => {
       try {
-        const { products } = await FirebaseProductsService.getProducts()
+        const { products } = await ProductService.getProducts()
         const displayProducts = products.map(product => ({
           id: product.id || '',
           name: product.name,
           price: product.price,
-          image: product.images[0] || '/placeholder.svg',
+          image: product.imageUrl || '/placeholder.svg',
           category: product.category,
           description: product.description
         }))
@@ -48,17 +48,11 @@ function SearchContent() {
         setLoading(false)
       }
     }
-
+    
     loadAllProducts()
   }, [])
 
-  useEffect(() => {
-    const query = searchParams.get("q") || ""
-    setSearchQuery(query)
-    filterProducts(query)
-  }, [searchParams, allProducts])
-
-  const filterProducts = (query: string) => {
+  const filterProducts = useCallback((query: string) => {
     if (!query.trim()) {
       setFilteredProducts(allProducts)
       return
@@ -74,7 +68,13 @@ function SearchContent() {
     })
 
     setFilteredProducts(filtered)
-  }
+  }, [allProducts])
+
+  useEffect(() => {
+    const query = searchParams.get("q") || ""
+    setSearchQuery(query)
+    filterProducts(query)
+  }, [searchParams, filterProducts])
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
@@ -187,3 +187,5 @@ export default function SearchPage() {
     </Suspense>
   )
 }
+
+

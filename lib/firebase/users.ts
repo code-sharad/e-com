@@ -10,7 +10,7 @@ import {
   onSnapshot,
   Timestamp,
 } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getFirestore } from "@/lib/firebase"
 
 export interface UserProfile {
   id?: string
@@ -35,6 +35,7 @@ export class FirebaseUsersService {
   // Get a single user by ID
   static async getUser(userId: string): Promise<UserProfile | null> {
     try {
+      const db = await getFirestore()
       const docRef = doc(db, this.COLLECTION_NAME, userId)
       const docSnap = await getDoc(docRef)
       
@@ -62,6 +63,7 @@ export class FirebaseUsersService {
     limit?: number
   }): Promise<UserProfile[]> {
     try {
+      const db = await getFirestore()
       let q = query(collection(db, this.COLLECTION_NAME), orderBy("createdAt", "desc"))
 
       if (filters?.isAdmin !== undefined) {
@@ -120,8 +122,9 @@ export class FirebaseUsersService {
   }
 
   // Real-time listener for user count
-  static subscribeToUserCount(callback: (count: number) => void): () => void {
+  static async subscribeToUserCount(callback: (count: number) => void): Promise<() => void> {
     try {
+      const db = await getFirestore()
       const q = query(collection(db, this.COLLECTION_NAME))
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -135,3 +138,4 @@ export class FirebaseUsersService {
     }
   }
 }
+

@@ -3,10 +3,10 @@
 import React from "react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { ProtectedRoute } from "@/components/protected-route"
-import { useAuth } from "@/components/auth-provider"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { useAuth } from "@/components/auth/auth-provider"
+import Navbar from "@/components/common/navbar"
+import Footer from "@/components/common/footer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Package, Eye, Truck, CheckCircle } from "lucide-react"
@@ -22,8 +22,30 @@ function OrdersContent() {
       if (!user?.email) return
       
       try {
-        const userOrders = await FirebaseOrdersService.getOrdersByCustomer(user.email)
-        setOrders(userOrders)
+        const userOrders = await FirebaseOrdersService.getOrders({
+          customerEmail: user.email
+        })
+        
+        // Validate and clean the orders data
+        const validatedOrders = userOrders.filter(order => {
+          if (!order.id) {
+            console.warn('Order missing ID:', order)
+            return false
+          }
+          if (!order.totalAmount && order.totalAmount !== 0) {
+            console.warn('Order missing totalAmount:', order)
+            // Set default totalAmount if missing
+            order.totalAmount = 0
+          }
+          if (!order.createdAt) {
+            console.warn('Order missing createdAt:', order)
+            // Set current date as fallback
+            order.createdAt = new Date()
+          }
+          return true
+        })
+        
+        setOrders(validatedOrders)
       } catch (error) {
         console.error("Error loading orders:", error)
       } finally {
@@ -42,9 +64,11 @@ function OrdersContent() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
+      pending: { label: "Pending", variant: "secondary" as const, icon: Package },
       processing: { label: "Processing", variant: "secondary" as const, icon: Package },
       shipped: { label: "Shipped", variant: "default" as const, icon: Truck },
       delivered: { label: "Delivered", variant: "default" as const, icon: CheckCircle },
+      cancelled: { label: "Cancelled", variant: "destructive" as const, icon: Package },
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.processing
@@ -84,15 +108,17 @@ function OrdersContent() {
                     <div>
                       <h3 className="font-semibold text-foreground">Order #{order.id}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Placed on {order.createdAt.toLocaleDateString()}
+                        Placed on {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'Date not available'}
                       </p>
                     </div>
                     <div className="flex items-center space-x-4 mt-2 sm:mt-0">
                       {getStatusBadge(order.status)}
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
+                      <Link href={`/orders/${order.id}`}>
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
+                      </Link>
                     </div>
                   </div>
 
@@ -104,7 +130,7 @@ function OrdersContent() {
                           {item.productName} × {item.quantity}
                         </span>
                         <span className="text-sm font-medium text-foreground">
-                          ₹{(item.price * item.quantity).toLocaleString()}
+                          ₹{(item.price && item.quantity ? (item.price * item.quantity) : 0).toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -112,7 +138,7 @@ function OrdersContent() {
 
                   <div className="flex justify-between items-center pt-2 border-t border-gold-200/20">
                     <span className="font-semibold text-foreground">Total</span>
-                    <span className="font-bold text-gold-500">₹{order.total.toLocaleString()}</span>
+                    <span className="font-bold text-gold-500">₹{(order.totalAmount || 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -144,3 +170,5 @@ export default function OrdersPage() {
     </ProtectedRoute>
   )
 }
+
+

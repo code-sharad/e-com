@@ -1,11 +1,18 @@
+'use client'
+
 import type React from "react"
-import type { Metadata } from "next"
 import { Playfair_Display, Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { CartProvider } from "@/components/cart-provider"
-import { AuthProvider } from "@/components/auth-provider"
-import AuthWrapper from "@/components/auth-wrapper"
+import { ThemeProvider } from "@/components/common/theme-provider"
+import { CartProvider } from "@/components/cart/cart-provider"
+import { AuthProvider } from "@/components/auth/auth-provider"
+import AuthWrapper from "@/components/auth/auth-wrapper"
+import { useEffect } from 'react'
+import { Providers } from '@/components/common/providers'
+import { Toaster } from '@/components/ui/toaster'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { cn } from '@/lib/utils/common'
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -19,14 +26,6 @@ const inter = Inter({
   display: "swap",
 })
 
-export const metadata: Metadata = {
-  title: "Global Saanvika - Premium Jewelry Collection",
-  description:
-    "Discover exquisite jewelry, photo frames, and resin art from Global Saanvika. Luxury craftsmanship meets timeless elegance.",
-  keywords: "jewelry, premium jewelry, photo frames, resin art, luxury accessories",
-    generator: 'v0.dev'
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -34,15 +33,46 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${playfair.variable} ${inter.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <AuthWrapper>
-              <CartProvider>{children}</CartProvider>
-            </AuthWrapper>
-          </AuthProvider>
-        </ThemeProvider>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    (registration) => {
+                      console.log('ServiceWorker registration successful:', registration.scope);
+                    },
+                    (err) => {
+                      console.log('ServiceWorker registration failed:', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
+      </head>
+      <body
+        className={cn(
+          'min-h-screen bg-background font-sans antialiased',
+          'selection:bg-gold-500/30'
+        )}
+      >
+        <Providers>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            <AuthProvider>
+              <AuthWrapper>
+                <CartProvider>{children}</CartProvider>
+              </AuthWrapper>
+            </AuthProvider>
+          </ThemeProvider>
+          <Toaster />
+        </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
 }
+

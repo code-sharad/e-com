@@ -3,10 +3,10 @@
 import React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
+import Navbar from "@/components/common/navbar"
+import Footer from "@/components/common/footer"
 import { Button } from "@/components/ui/button"
-import { useCart } from "@/components/cart-provider"
+import { useCart } from "@/components/cart/cart-provider"
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
 
 export default function CartPage() {
@@ -172,3 +172,5 @@ export default function CartPage() {
     </div>
   )
 }
+
+

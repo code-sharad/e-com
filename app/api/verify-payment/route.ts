@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       // Payment is verified - update order status in Firebase
       if (orderId) {
         try {
-          await FirebaseOrdersService.updatePaymentStatus(orderId, "paid")
+          await FirebaseOrdersService.updatePaymentStatus(orderId, "completed")
           await FirebaseOrdersService.updateOrderStatus(orderId, "processing")
           console.log("Order updated successfully:", orderId)
         } catch (error) {
@@ -58,3 +58,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

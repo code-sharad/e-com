@@ -1,0 +1,70 @@
+[debug] [2025-06-13T07:45:53.728Z] ----------------------------------------------------------------------
+[debug] [2025-06-13T07:45:53.730Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\banka\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login
+[debug] [2025-06-13T07:45:53.731Z] CLI Version:   14.7.0
+[debug] [2025-06-13T07:45:53.731Z] Platform:      win32
+[debug] [2025-06-13T07:45:53.731Z] Node Version:  v22.16.0
+[debug] [2025-06-13T07:45:53.731Z] Time:          Fri Jun 13 2025 13:15:53 GMT+0530 (India Standard Time)
+[debug] [2025-06-13T07:45:53.731Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-06-13T07:45:53.733Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[info] Already logged in as bankaraniketk@gmail.com
+[debug] [2025-06-13T07:46:04.013Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\banka\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:267:49)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-06-13T07:46:10.371Z] ----------------------------------------------------------------------
+[debug] [2025-06-13T07:46:10.374Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\banka\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-06-13T07:46:10.374Z] CLI Version:   14.7.0
+[debug] [2025-06-13T07:46:10.374Z] Platform:      win32
+[debug] [2025-06-13T07:46:10.374Z] Node Version:  v22.16.0
+[debug] [2025-06-13T07:46:10.375Z] Time:          Fri Jun 13 2025 13:16:10 GMT+0530 (India Standard Time)
+[debug] [2025-06-13T07:46:10.375Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-06-13T07:46:10.378Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2025-06-13T07:46:10.633Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-13T07:46:10.634Z] > authorizing via signed-in user (bankaraniketk@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  E:\global-saanvika-ecommerce
+
+Before we get started, keep in mind:
+
+  * You are initializing within an existing Firebase project directory
+
+[debug] [2025-06-13T07:46:13.729Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2025-06-13T07:46:13.729Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] but for now we'll just set up a default project.
+[info] 
+[debug] [2025-06-13T07:46:33.797Z] Using project from CLI flag: e-com-620fe
+[debug] [2025-06-13T07:46:33.798Z] Checked if tokens are valid: false, expires at: 1749732719163
+[debug] [2025-06-13T07:46:33.799Z] Checked if tokens are valid: false, expires at: 1749732719163
+[debug] [2025-06-13T07:46:33.799Z] > refreshing access token with scopes: []
+[debug] [2025-06-13T07:46:33.800Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-06-13T07:46:33.800Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-06-13T07:47:05.667Z] *** [apiv2] error from fetch(https://www.googleapis.com/oauth2/v3/token, {"headers":{},"method":"POST","body":{"_overheadLength":545,"_valueLength":212,"_valuesToMeasure":[],"writable":false,"readable":true,"dataSize":0,"maxDataSize":2097152,"pauseStreams":true,"_released":true,"_streams":[],"_currentStream":null,"_insideLoop":false,"_pendingNext":false,"_boundary":"--------------------------229465702550158350095136","_events":{},"_eventsCount":1}}): FetchError: request to https://www.googleapis.com/oauth2/v3/token failed, reason: socket hang up
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2025-06-13T07:47:05.669Z] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2025-06-13T07:47:10.685Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\banka\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:267:49)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+[error] 
+[error] Error: An unexpected error has occurred.

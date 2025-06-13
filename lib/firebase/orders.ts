@@ -13,11 +13,9 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  type DocumentData,
-  type QueryDocumentSnapshot,
   Timestamp,
 } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getFirestore } from "@/lib/firebase"
 
 export interface OrderItem {
   productId: string
@@ -32,38 +30,59 @@ export interface Order {
   customerName: string
   customerEmail: string
   customerPhone?: string
-  customerAddress?: {
+  shippingAddress: {
     street: string
     city: string
     state: string
     pincode: string
   }
   items: OrderItem[]
-  subtotal: number
-  shipping: number
-  total: number
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled"
-  paymentMethod: "razorpay" | "cod"
-  paymentStatus: "pending" | "paid" | "failed"
-  trackingNumber?: string
+  totalAmount: number
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  paymentStatus: 'pending' | 'completed' | 'failed'
+  paymentMethod: string
   createdAt: Date
   updatedAt: Date
+  notes?: string
 }
 
 export class FirebaseOrdersService {
   private static readonly COLLECTION_NAME = "orders"
 
-  // Create a new order
-  static async createOrder(orderData: Omit<Order, "id" | "createdAt" | "updatedAt">): Promise<string> {
-    try {
-      const order: Omit<Order, "id"> = {
-        ...orderData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
+  // Helper function to safely convert Timestamp to Date
+  private static convertTimestampToDate(timestamp: any): Date {
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate()
+    }
+    if (timestamp && timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000)
+    }
+    if (timestamp instanceof Date) {
+      return timestamp
+    }
+    if (typeof timestamp === 'string') {
+      return new Date(timestamp)
+    }
+    if (typeof timestamp === 'number') {
+      return new Date(timestamp)
+    }
+    return new Date() // fallback to current date
+  }
 
-      const docRef = await addDoc(collection(db, this.COLLECTION_NAME), order)
-      console.log("Order created with ID:", docRef.id)
+  private static async getCollection() {
+    const db = await getFirestore()
+    return collection(db, this.COLLECTION_NAME)
+  }
+  // Create a new order
+  static async createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const ordersCollection = await this.getCollection()
+      const now = Timestamp.now()
+      const docRef = await addDoc(ordersCollection, {
+        ...orderData,
+        createdAt: now,
+        updatedAt: now
+      })
       return docRef.id
     } catch (error) {
       console.error("Error creating order:", error)
@@ -74,16 +93,16 @@ export class FirebaseOrdersService {
   // Get a single order by ID
   static async getOrder(orderId: string): Promise<Order | null> {
     try {
-      const docRef = doc(db, this.COLLECTION_NAME, orderId)
+      const ordersCollection = await this.getCollection()
+      const docRef = doc(ordersCollection, orderId)
       const docSnap = await getDoc(docRef)
-
-      if (docSnap.exists()) {
+        if (docSnap.exists()) {
         const data = docSnap.data()
         return {
           id: docSnap.id,
           ...data,
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
+          createdAt: this.convertTimestampToDate(data.createdAt),
+          updatedAt: this.convertTimestampToDate(data.updatedAt)
         } as Order
       }
 
@@ -99,8 +118,10 @@ export class FirebaseOrdersService {
     status?: string
     customerEmail?: string
     limit?: number
-  }): Promise<Order[]> {    try {
-      let q = query(collection(db, this.COLLECTION_NAME), orderBy("createdAt", "desc"))
+  }): Promise<Order[]> {
+    try {
+      const ordersCollection = await this.getCollection()
+      let q = query(ordersCollection, orderBy("createdAt", "desc"))
 
       if (filters?.status) {
         q = query(q, where("status", "==", filters.status))
@@ -112,133 +133,31 @@ export class FirebaseOrdersService {
 
       if (filters?.limit) {
         q = query(q, limit(filters.limit))
-      }
-
-      const querySnapshot = await getDocs(q)
+      }      const querySnapshot = await getDocs(q)
       return querySnapshot.docs.map((doc) => {
         const data = doc.data()
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
+          createdAt: this.convertTimestampToDate(data.createdAt),
+          updatedAt: this.convertTimestampToDate(data.updatedAt),
         } as Order
       })
-    } catch (error: any) {
-      // If the composite index is not ready, fall back to a simpler query
-      if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
-        console.warn("Composite index not ready for getOrders, using fallback query...")
-        try {
-          // Fallback: get all orders without complex filtering
-          let q = query(collection(db, this.COLLECTION_NAME))
-
-          if (filters?.limit) {
-            q = query(q, limit(filters.limit))
-          }
-
-          const querySnapshot = await getDocs(q)
-          let orders = querySnapshot.docs.map((doc) => {
-            const data = doc.data()
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt.toDate(),
-              updatedAt: data.updatedAt.toDate(),
-            } as Order
-          })
-
-          // Filter and sort in memory
-          if (filters?.status) {
-            orders = orders.filter(order => order.status === filters.status)
-          }
-          if (filters?.customerEmail) {
-            orders = orders.filter(order => order.customerEmail === filters.customerEmail)
-          }
-
-          // Sort by createdAt
-          orders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-
-          return orders
-        } catch (fallbackError) {
-          console.error("Error in fallback getOrders query:", fallbackError)
-          throw fallbackError
-        }
-      }
-      
+    } catch (error) {
       console.error("Error getting orders:", error)
-      throw error
-    }
-  }
-  // Get orders by customer email
-  static async getOrdersByCustomer(customerEmail: string): Promise<Order[]> {
-    try {
-      // Try the optimized query first (requires composite index)
-      const q = query(
-        collection(db, this.COLLECTION_NAME),
-        where("customerEmail", "==", customerEmail),
-        orderBy("createdAt", "desc")
-      )
-
-      const querySnapshot = await getDocs(q)
-      const orders: Order[] = []
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data()
-        orders.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Order)
-      })
-
-      return orders
-    } catch (error: any) {
-      // If the composite index is not ready, fall back to a simpler query
-      if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
-        console.warn("Composite index not ready, using fallback query...")
-        try {
-          // Fallback: get all orders and filter in memory
-          const q = query(
-            collection(db, this.COLLECTION_NAME),
-            where("customerEmail", "==", customerEmail)
-          )
-
-          const querySnapshot = await getDocs(q)
-          const orders: Order[] = []
-
-          querySnapshot.forEach((doc) => {
-            const data = doc.data()
-            orders.push({
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt.toDate(),
-              updatedAt: data.updatedAt.toDate(),
-            } as Order)
-          })
-
-          // Sort by createdAt in memory
-          return orders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        } catch (fallbackError) {
-          console.error("Error in fallback query:", fallbackError)
-          throw fallbackError
-        }
-      }
-      
-      console.error("Error getting orders by customer:", error)
       throw error
     }
   }
 
   // Update order status
-  static async updateOrderStatus(orderId: string, status: Order["status"]): Promise<void> {
+  static async updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
     try {
-      const orderRef = doc(db, this.COLLECTION_NAME, orderId)
-      await updateDoc(orderRef, {
+      const ordersCollection = await this.getCollection()
+      const docRef = doc(ordersCollection, orderId)
+      await updateDoc(docRef, {
         status,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
-      console.log("Order status updated:", orderId, status)
     } catch (error) {
       console.error("Error updating order status:", error)
       throw error
@@ -246,38 +165,58 @@ export class FirebaseOrdersService {
   }
 
   // Update payment status
-  static async updatePaymentStatus(orderId: string, paymentStatus: Order["paymentStatus"]): Promise<void> {
+  static async updatePaymentStatus(orderId: string, paymentStatus: Order['paymentStatus']): Promise<void> {
     try {
-      const orderRef = doc(db, this.COLLECTION_NAME, orderId)
-      await updateDoc(orderRef, {
+      const ordersCollection = await this.getCollection()
+      const docRef = doc(ordersCollection, orderId)
+      await updateDoc(docRef, {
         paymentStatus,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
-      console.log("Payment status updated:", orderId, paymentStatus)
     } catch (error) {
       console.error("Error updating payment status:", error)
       throw error
     }
   }
 
+  // Delete an order
+  static async deleteOrder(orderId: string): Promise<void> {
+    try {
+      const ordersCollection = await this.getCollection()
+      const docRef = doc(ordersCollection, orderId)
+      await deleteDoc(docRef)
+    } catch (error) {
+      console.error("Error deleting order:", error)
+      throw error
+    }
+  }
+
   // Get order statistics
   static async getOrderStats(): Promise<{
-    totalOrders: number
-    totalRevenue: number
-    pendingOrders: number
-    completedOrders: number
+    total: number
+    pending: number
+    processing: number
+    shipped: number
+    delivered: number
+    cancelled: number
   }> {
     try {
-      const orders = await this.getOrders()
-      
+      const ordersCollection = await this.getCollection()
       const stats = {
-        totalOrders: orders.length,
-        totalRevenue: orders
-          .filter(order => order.paymentStatus === "paid")
-          .reduce((sum, order) => sum + order.total, 0),
-        pendingOrders: orders.filter(order => order.status === "pending").length,
-        completedOrders: orders.filter(order => order.status === "delivered").length,
+        total: 0,
+        pending: 0,
+        processing: 0,
+        shipped: 0,
+        delivered: 0,
+        cancelled: 0
       }
+
+      const querySnapshot = await getDocs(ordersCollection)
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        stats.total++
+        stats[data.status as keyof typeof stats]++
+      })
 
       return stats
     } catch (error) {
@@ -285,60 +224,49 @@ export class FirebaseOrdersService {
       throw error
     }
   }
-  // Real-time listener for orders
-  static subscribeToOrders(
-    callback: (orders: Order[]) => void,
-    filters?: { status?: string; limit?: number }
-  ): () => void {
-    try {
-      let q = query(collection(db, this.COLLECTION_NAME), orderBy("createdAt", "desc"))
 
-      if (filters?.status) {
-        q = query(q, where("status", "==", filters.status))
+  // Subscribe to order updates
+  static async subscribeToOrder(orderId: string, callback: (order: Order | null) => void): Promise<() => void> {
+    const db = await getFirestore()
+    const docRef = doc(db, this.COLLECTION_NAME, orderId)
+    
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data()
+        callback({
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt.toDate(),
+          updatedAt: data.updatedAt.toDate()
+        } as Order)
+      } else {
+        callback(null)
       }
+    })
 
-      if (filters?.limit) {
-        q = query(q, limit(filters.limit))
-      }
-
-      const unsubscribe = onSnapshot(q, 
-        (querySnapshot) => {
-          const orders: Order[] = querySnapshot.docs.map((doc) => {
-            const data = doc.data()
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt.toDate(),
-              updatedAt: data.updatedAt.toDate(),
-            } as Order
-          })
-          callback(orders)
-        },
-        (error) => {
-          console.error("Error in orders subscription:", error)
-          // If index is not ready, provide empty array and retry later
-          if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
-            console.warn("Index not ready for real-time subscription, providing empty orders...")
-            callback([])
-          }
-        }
-      )
-
-      return unsubscribe
-    } catch (error) {
-      console.error("Error subscribing to orders:", error)
-      throw error
-    }
+    return unsubscribe
   }
 
-  // Delete order (admin only)
-  static async deleteOrder(orderId: string): Promise<void> {
-    try {
-      await deleteDoc(doc(db, this.COLLECTION_NAME, orderId))
-      console.log("Order deleted:", orderId)
-    } catch (error) {
-      console.error("Error deleting order:", error)
-      throw error
-    }
+  // Subscribe to all orders
+  static async subscribeToAllOrders(callback: (orders: Order[]) => void): Promise<() => void> {
+    const db = await getFirestore()
+    const ordersRef = collection(db, this.COLLECTION_NAME)
+    const q = query(ordersRef, orderBy('createdAt', 'desc'))
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const orders = querySnapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt.toDate(),
+          updatedAt: data.updatedAt.toDate()
+        } as Order
+      })
+      callback(orders)
+    })
+
+    return unsubscribe
   }
 }
+

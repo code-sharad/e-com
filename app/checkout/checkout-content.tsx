@@ -6,8 +6,8 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useCart } from "@/components/cart-provider"
-import { useAuth } from "@/components/auth-provider"
+import { useCart } from "@/components/cart/cart-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { CreditCard, MapPin, User } from "lucide-react"
 import { FirebaseOrdersService, type Order } from "@/lib/firebase/orders"
 
@@ -80,15 +80,13 @@ export default function CheckoutContent() {
   const subtotal = state.total
   const tax = Math.round(subtotal * 0.18)
   const total = subtotal + tax
-
   // Create order function
-  const createOrder = async (paymentMethod: "razorpay" | "cod", paymentStatus: "pending" | "paid" = "pending") => {
-    try {
-      const orderData: Omit<Order, "id" | "createdAt" | "updatedAt"> = {
+  const createOrder = async (paymentMethod: "razorpay" | "cod", paymentStatus: "pending" | "completed" = "pending") => {
+    try {      const orderData: Omit<Order, "id" | "createdAt" | "updatedAt"> = {
         customerName: `${formData.firstName} ${formData.lastName}`,
         customerEmail: formData.email,
         customerPhone: formData.phone,
-        customerAddress: {
+        shippingAddress: {
           street: formData.address,
           city: formData.city,
           state: formData.state,
@@ -101,9 +99,7 @@ export default function CheckoutContent() {
           price: item.price,
           image: item.image,
         })),
-        subtotal: subtotal,
-        shipping: 0, // Free shipping
-        total: total,
+        totalAmount: total,
         status: "pending",
         paymentMethod: paymentMethod,
         paymentStatus: paymentStatus,
@@ -513,3 +509,4 @@ export default function CheckoutContent() {
     </div>
   )
 }
+

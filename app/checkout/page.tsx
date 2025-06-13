@@ -5,15 +5,15 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
+import Navbar from "@/components/common/navbar"
+import Footer from "@/components/common/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useCart } from "@/components/cart-provider"
-import { useAuth } from "@/components/auth-provider"
+import { useCart } from "@/components/cart/cart-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { CreditCard, MapPin, User } from "lucide-react"
-import AuthLoading from "@/components/auth-loading"
+import AuthLoading from "@/components/auth/auth-loading"
 import { FirebaseOrdersService, type Order } from "@/lib/firebase/orders"
 
 declare global {
@@ -94,13 +94,13 @@ export default function CheckoutPage() {
   const total = subtotal + tax
 
   // Create order function
-  const createOrder = async (paymentMethod: "razorpay" | "cod", paymentStatus: "pending" | "paid" = "pending") => {
+  const createOrder = async (paymentMethod: "razorpay" | "cod", paymentStatus: "pending" | "completed" = "pending") => {
     try {
       const orderData: Omit<Order, "id" | "createdAt" | "updatedAt"> = {
         customerName: `${formData.firstName} ${formData.lastName}`,
         customerEmail: formData.email,
         customerPhone: formData.phone,
-        customerAddress: {
+        shippingAddress: {
           street: formData.address,
           city: formData.city,
           state: formData.state,
@@ -113,9 +113,7 @@ export default function CheckoutPage() {
           price: item.price,
           image: item.image,
         })),
-        subtotal: subtotal,
-        shipping: 0, // Free shipping
-        total: total,
+        totalAmount: total,
         status: "pending",
         paymentMethod: paymentMethod,
         paymentStatus: paymentStatus,
@@ -548,3 +546,5 @@ export default function CheckoutPage() {
     </div>
   )
 }
+
+

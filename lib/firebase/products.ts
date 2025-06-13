@@ -1,5 +1,4 @@
 // Component memoized for performance (6.98KB)
-import React from "react"
 import {
   collection,
   doc,
@@ -11,238 +10,310 @@ import {
   query,
   where,
   orderBy,
-  limit,
+  limit as firestoreLimit,
   startAfter,
   type DocumentData,
   type QueryDocumentSnapshot,
+  Timestamp,
+  type OrderByDirection,
 } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getFirestore } from "@/lib/firebase"
+import { type Product } from '@/types/product'
+export type { Product }
 
-export interface Product {
-  id?: string
+interface FirebaseProduct {
   name: string
   description: string
   price: number
-  originalPrice?: number
   category: string
-  subcategory?: string
   images: string[]
-  inStock: boolean
   stockQuantity: number
+  inStock: boolean
   featured: boolean
-  tags: string[]
+  comparePrice?: number
+  sizes?: string[]
+  sku?: string
+  weight?: string
+  dimensions?: {
+    length: number
+    width: number
+    height: number
+  }
+  material?: string
+  careInstructions?: string[]
+  features?: string[]
   specifications?: Record<string, string>
-  createdAt: Date
-  updatedAt: Date
+  averageRating?: number
+  totalReviews?: number
+  ratings?: {
+    [key: string]: number
+  }
+  createdAt?: Date
+  updatedAt?: Date
 }
 
-export class FirebaseProductsService {
-  private static readonly COLLECTION_NAME = "products"
+export class ProductService {
+  private static COLLECTION_NAME = "products"
+
+  // Helper function to add timeout to Firebase operations
+  private static withTimeout<T>(promise: Promise<T>, timeoutMs: number = 20000): Promise<T> {
+    // Use shorter timeout during build time
+    const isBuildTime = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build'
+    const adjustedTimeout = isBuildTime ? Math.min(timeoutMs, 15000) : timeoutMs
+    
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) => 
+        setTimeout(() => reject(new Error(`Operation timed out after ${adjustedTimeout}ms`)), adjustedTimeout)
+      )
+    ])
+  }
+
+  private static transformProduct(docId: string, data: FirebaseProduct): Product {
+    return {
+      id: docId,
+      ...data,
+      imageUrl: data.images[0] || '/placeholder.jpg',
+    }
+  }
+
+  // Helper function to serialize Firestore data for client components
+  private static serializeProduct(data: any): Product {
+    const serialized = { ...data }
+    
+    // Convert Timestamp objects to plain Date objects or ISO strings
+    if (serialized.createdAt && typeof serialized.createdAt.toDate === 'function') {
+      serialized.createdAt = serialized.createdAt.toDate().toISOString()
+    }
+    if (serialized.updatedAt && typeof serialized.updatedAt.toDate === 'function') {
+      serialized.updatedAt = serialized.updatedAt.toDate().toISOString()
+    }
+    
+    // Ensure all nested objects are plain objects
+    if (serialized.dimensions && typeof serialized.dimensions === 'object') {
+      serialized.dimensions = { ...serialized.dimensions }
+    }
+    if (serialized.ratings && typeof serialized.ratings === 'object') {
+      serialized.ratings = { ...serialized.ratings }
+    }
+    if (serialized.specifications && typeof serialized.specifications === 'object') {
+      serialized.specifications = { ...serialized.specifications }
+    }
+    
+    return serialized as Product
+  }
 
   // Create a new product
-  static async createProduct(productData: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<string> {
+  static async createProduct(product: Omit<Product, 'id'>) {
     try {
-      const product: Omit<Product, "id"> = {
-        ...productData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-
-      const docRef = await addDoc(collection(db, this.COLLECTION_NAME), product)
-      console.log("Product created with ID:", docRef.id)
+      const db = await getFirestore()
+      const docRef = await addDoc(collection(db, this.COLLECTION_NAME), {
+        ...product,
+        createdAt: Timestamp.now()
+      })
+      console.log('Product created with ID:', docRef.id)
       return docRef.id
     } catch (error) {
-      console.error("Error creating product:", error)
-      throw new Error("Failed to create product")
+      console.error('Error creating product:', error)
+      throw error
     }
   }
 
   // Get a single product by ID
   static async getProduct(id: string): Promise<Product | null> {
     try {
-      const docRef = doc(db, this.COLLECTION_NAME, id)
-      const docSnap = await getDoc(docRef)
-
-      if (docSnap.exists()) {
-        const data = docSnap.data()
-        return {
-          id: docSnap.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Product
+      const db = await getFirestore()
+      const productRef = doc(db, this.COLLECTION_NAME, id)
+      const productDoc = await this.withTimeout(getDoc(productRef), 30000) // 30 second timeout
+      
+      if (productDoc.exists()) {
+        const rawData = {
+          id: productDoc.id,
+          ...productDoc.data()
+        }
+        return this.serializeProduct(rawData)
       }
-
+      
       return null
     } catch (error) {
-      console.error("Error getting product:", error)
-      return null
+      console.error('Error getting product:', error)
+      throw error
     }
   }
 
   // Get all products with optional filtering
-  static async getProducts(
-    options: {
-      category?: string
-      featured?: boolean
-      inStock?: boolean
-      limit?: number
-      lastDoc?: QueryDocumentSnapshot<DocumentData>
-    } = {},
-  ): Promise<{ products: Product[]; lastDoc?: QueryDocumentSnapshot<DocumentData> }> {
+  static async getProducts({
+    category,
+    featured,
+    limit: limitCount = 10,
+    orderByField = 'createdAt',
+    orderDirection = 'desc' as OrderByDirection
+  }: {
+    category?: string
+    featured?: boolean
+    limit?: number
+    orderByField?: string
+    orderDirection?: OrderByDirection
+  } = {}) {
     try {
-      let q = query(collection(db, this.COLLECTION_NAME))
+      const db = await getFirestore()
+      const productsRef = collection(db, this.COLLECTION_NAME)
+      let q = query(productsRef)
 
-      // Add filters
-      if (options.category) {
-        q = query(q, where("category", "==", options.category))
-      }
-      if (options.featured !== undefined) {
-        q = query(q, where("featured", "==", options.featured))
-      }
-      if (options.inStock !== undefined) {
-        q = query(q, where("inStock", "==", options.inStock))
+      if (category) {
+        q = query(q, where('category', '==', category))
       }
 
-      // Add ordering and pagination
-      q = query(q, orderBy("createdAt", "desc"))
-
-      if (options.limit) {
-        q = query(q, limit(options.limit))
+      if (featured !== undefined) {
+        q = query(q, where('featured', '==', featured))
       }
 
-      if (options.lastDoc) {
-        q = query(q, startAfter(options.lastDoc))
+      q = query(q, orderBy(orderByField, orderDirection))
+
+      if (limitCount > 0) {
+        q = query(q, firestoreLimit(limitCount))
       }
 
-      const querySnapshot = await getDocs(q)
-      const products: Product[] = []
-      let lastDoc: QueryDocumentSnapshot<DocumentData> | undefined
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data()
-        products.push({
+      // Add timeout to the Firebase query - shorter timeout for build
+      const querySnapshot = await this.withTimeout(getDocs(q), 20000) // 20 second timeout
+      const products = querySnapshot.docs.map(doc => {
+        const rawData = {
           id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Product)
-        lastDoc = doc
+          ...doc.data()
+        }
+        return this.serializeProduct(rawData)
       })
 
-      return { products, lastDoc }
+      return { products }
     } catch (error) {
-      console.error("Error getting products:", error)
-      return { products: [] }
+      console.error('Error getting products:', error)
+      throw error
     }
   }
 
   // Update a product
-  static async updateProduct(id: string, updates: Partial<Omit<Product, "id" | "createdAt">>): Promise<void> {
+  static async updateProduct(id: string, updates: Partial<Omit<Product, 'id' | 'createdAt'>>): Promise<void> {
     try {
-      const docRef = doc(db, this.COLLECTION_NAME, id)
-      await updateDoc(docRef, {
+      const db = await getFirestore()
+      const productRef = doc(db, this.COLLECTION_NAME, id)
+      await updateDoc(productRef, {
         ...updates,
-        updatedAt: new Date(),
+        updatedAt: Timestamp.now()
       })
-      console.log("Product updated successfully")
+      console.log('Product updated successfully')
     } catch (error) {
-      console.error("Error updating product:", error)
-      throw new Error("Failed to update product")
+      console.error('Error updating product:', error)
+      throw error
     }
   }
 
   // Delete a product
   static async deleteProduct(id: string): Promise<void> {
     try {
-      const docRef = doc(db, this.COLLECTION_NAME, id)
-      await deleteDoc(docRef)
-      console.log("Product deleted successfully")
+      console.log('ProductService.deleteProduct called with ID:', id)
+      
+      if (!id || id.trim() === '') {
+        throw new Error('Product ID is required for deletion')
+      }
+      
+      const db = await getFirestore()
+      console.log('Got Firestore instance')
+      
+      const productRef = doc(db, this.COLLECTION_NAME, id)
+      console.log('Created product reference for deletion:', id)
+      
+      await deleteDoc(productRef)
+      console.log('Product deleted successfully from Firestore:', id)
     } catch (error) {
-      console.error("Error deleting product:", error)
-      throw new Error("Failed to delete product")
+      console.error('Error deleting product:', error)
+      throw error
     }
   }
 
   // Search products
-  static async searchProducts(searchTerm: string): Promise<Product[]> {
+  static async searchProducts(searchTerm: string, maxResults: number = 10): Promise<Product[]> {
     try {
-      // Note: Firestore doesn't have full-text search, so we'll get all products
-      // and filter on the client side. For production, consider using Algolia or similar.
-      const { products } = await this.getProducts()
-
-      const searchTermLower = searchTerm.toLowerCase()
-      return products.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchTermLower) ||
-          product.description.toLowerCase().includes(searchTermLower) ||
-          product.category.toLowerCase().includes(searchTermLower) ||
-          product.tags.some((tag) => tag.toLowerCase().includes(searchTermLower)),
+      const db = await getFirestore()
+      const productsRef = collection(db, this.COLLECTION_NAME)
+      const q = query(
+        productsRef,
+        where('name', '>=', searchTerm),
+        where('name', '<=', searchTerm + '\uf8ff'),
+        firestoreLimit(maxResults)
       )
+      const querySnapshot = await getDocs(q)
+      return querySnapshot.docs.map(doc => {
+        const rawData = {
+          id: doc.id,
+          ...doc.data()
+        }
+        return this.serializeProduct(rawData)
+      })
     } catch (error) {
-      console.error("Error searching products:", error)
-      return []
+      console.error('Error searching products:', error)
+      throw error
     }
   }
 
   // Get products by category
   static async getProductsByCategory(category: string): Promise<Product[]> {
     try {
-      const { products } = await this.getProducts({ category })
+      const db = await getFirestore()
+      const productsRef = collection(db, this.COLLECTION_NAME)
+      const q = query(productsRef, where('category', '==', category))
+      const querySnapshot = await getDocs(q)
+      const products = querySnapshot.docs.map(doc => {
+        const rawData = {
+          id: doc.id,
+          ...doc.data()
+        }
+        return this.serializeProduct(rawData)
+      })
       return products
     } catch (error) {
-      console.error("Error getting products by category:", error)
-      return []
+      console.error('Error getting products by category:', error)
+      throw error
     }
   }
 
   // Get featured products
   static async getFeaturedProducts(limitCount = 8): Promise<Product[]> {
     try {
-      // Temporary solution: Get all featured products without ordering, then sort in memory
-      // This avoids the composite index requirement while indexes are being built
-      const q = query(
-        collection(db, this.COLLECTION_NAME),
-        where("featured", "==", true),
-        limit(limitCount * 2) // Get more to ensure we have enough after sorting
-      )
+      const db = await getFirestore()
+      const productsRef = collection(db, this.COLLECTION_NAME)
+      const q = query(productsRef, where('featured', '==', true), firestoreLimit(limitCount))
       
       const querySnapshot = await getDocs(q)
-      const products: Product[] = []
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data()
-        products.push({
+      const products = querySnapshot.docs.map(doc => {
+        const rawData = {
           id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Product)
+          ...doc.data()
+        }
+        return this.serializeProduct(rawData)
       })
 
-      // Sort by createdAt in memory and limit to desired count
       return products
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        .slice(0, limitCount)
     } catch (error) {
-      console.error("Error getting featured products:", error)
-      return []
+      console.error('Error getting featured products:', error)
+      throw error
     }
   }
 
   // Update stock quantity
   static async updateStock(id: string, quantity: number): Promise<void> {
     try {
-      const docRef = doc(db, this.COLLECTION_NAME, id)
-      await updateDoc(docRef, {
+      const db = await getFirestore()
+      const productRef = doc(db, this.COLLECTION_NAME, id)
+      await updateDoc(productRef, {
         stockQuantity: quantity,
         inStock: quantity > 0,
-        updatedAt: new Date(),
+        updatedAt: Timestamp.now()
       })
-      console.log("Stock updated successfully")
+      console.log('Stock updated successfully')
     } catch (error) {
-      console.error("Error updating stock:", error)
-      throw new Error("Failed to update stock")
+      console.error('Error updating stock:', error)
+      throw error
     }
   }
 }
+

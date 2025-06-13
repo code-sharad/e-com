@@ -2,10 +2,10 @@
 // Component memoized for performance (5.25KB)
 import React from "react"
 import Link from "next/link"
-import { ProtectedRoute } from "@/components/protected-route"
-import { useAuth } from "@/components/auth-provider"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { useAuth } from "@/components/auth/auth-provider"
+import Navbar from "@/components/common/navbar"
+import Footer from "@/components/common/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -141,3 +141,5 @@ export default function ProfilePage() {
     </ProtectedRoute>
   )
 }
+
+

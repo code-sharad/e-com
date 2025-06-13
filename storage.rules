@@ -7,14 +7,28 @@ service firebase.storage {
       allow read: if true;
     }
     
-    // Allow authenticated users to upload files
+    // Allow authenticated users to upload files to products folder
     match /products/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024 // 10MB limit
+        && request.resource.contentType.matches('image/.*'); // Only images
+    }
+    
+    // Allow authenticated users to upload to debug folders
+    match /debug-uploads/{allPaths=**} {
+      allow read, write: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024 // 10MB limit
+        && request.resource.contentType.matches('image/.*'); // Only images
     }
     
     // Allow users to upload to their own folder
     match /users/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Temporary rule for debugging - allow uploads to test folder (remove in production)
+    match /test/{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

@@ -17,3 +17,4 @@ export const Icon = ({ name, ...props }: IconComponentProps) => {
 export const IconNames = Object.keys(LucideIcons).filter(
   (key) => typeof LucideIcons[key as keyof typeof LucideIcons] === 'function'
 ) as (keyof typeof LucideIcons)[]
+

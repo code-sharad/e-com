@@ -6,14 +6,14 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Package, Filter } from "lucide-react"
-import { SimpleDropdown } from "@/components/simple-dropdown"
-import { FirebaseProductsService, type Product } from "@/lib/firebase/products"
+import { SimpleDropdown } from "@/components/common/simple-dropdown"
+import { ProductService, type Product } from "@/lib/firebase/products"
 
 export default function AdminProductsPageWithFallback() {
   const { user } = useAuth()
@@ -29,7 +29,7 @@ export default function AdminProductsPageWithFallback() {
   const loadProducts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const { products: allProducts } = await FirebaseProductsService.getProducts()
+      const { products: allProducts } = await ProductService.getProducts()
       setProducts(allProducts)
     } catch (error) {
       console.error("Error loading products:", error)
@@ -98,7 +98,7 @@ export default function AdminProductsPageWithFallback() {
   const handleDeleteProduct = async (productId: string, productName: string) => {
     if (confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
       try {
-        await FirebaseProductsService.deleteProduct(productId)
+        await ProductService.deleteProduct(productId)
         loadProducts() // Refresh the list
         alert("Product deleted successfully!")
       } catch (error) {
@@ -326,7 +326,7 @@ export default function AdminProductsPageWithFallback() {
                         <div className="flex items-center">
                           <Image
                             className="h-12 w-12 rounded-lg object-cover"
-                            src={product.images[0] || "/placeholder.svg"}
+                            src={product.imageUrl || "/placeholder.svg"}
                             alt={product.name}
                             width={48}
                             height={48}
@@ -343,8 +343,8 @@ export default function AdminProductsPageWithFallback() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm">
                           <div className="font-medium text-foreground">₹{product.price.toLocaleString()}</div>
-                          {product.originalPrice && (
-                            <div className="text-muted-foreground line-through">₹{product.originalPrice.toLocaleString()}</div>
+                          {product.comparePrice && (
+                            <div className="text-muted-foreground line-through">₹{product.comparePrice.toLocaleString()}</div>
                           )}
                         </div>
                       </td>
@@ -353,7 +353,7 @@ export default function AdminProductsPageWithFallback() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(product.inStock, product.stockQuantity)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        {new Date(product.createdAt).toLocaleDateString()}
+                        {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <SimpleDropdown
@@ -402,3 +402,4 @@ export default function AdminProductsPageWithFallback() {
     </div>
   )
 }
+

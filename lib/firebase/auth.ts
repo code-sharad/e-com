@@ -1,5 +1,4 @@
 // Component memoized for performance (6.53KB)
-import React from "react"
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -9,7 +8,7 @@ import {
   type User,
 } from "firebase/auth"
 import { doc, setDoc, getDoc } from "firebase/firestore"
-import { auth, db } from "@/lib/firebase"
+import { getFirebaseAuth, getFirestore } from "@/lib/firebase"
 
 export interface UserProfile {
   uid: string
@@ -25,6 +24,9 @@ export class FirebaseAuthService {
   // Register new user
   static async register(email: string, password: string, name: string, phone?: string): Promise<UserProfile> {
     try {
+      const auth = await getFirebaseAuth()
+      const db = await getFirestore()
+      
       // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -60,17 +62,16 @@ export class FirebaseAuthService {
   // Login user
   static async login(email: string, password: string): Promise<UserProfile> {
     try {
-      console.log("🔐 Starting login process for:", email)
+      const auth = await getFirebaseAuth()
+      const db = await getFirestore()
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
-      console.log("✅ Firebase Auth successful for user:", user.uid)
 
       // Get user profile from Firestore
-      console.log("📄 Checking for user profile in Firestore...")
       const userDoc = await getDoc(doc(db, "users", user.uid))
 
       if (!userDoc.exists()) {
-        console.log("⚠️ User profile not found, creating new profile...")
         // If user profile doesn't exist, create a basic one
         const userProfile: UserProfile = {
           uid: user.uid,
@@ -81,13 +82,10 @@ export class FirebaseAuthService {
           updatedAt: new Date(),
         }
 
-        console.log("💾 Creating user profile in Firestore:", userProfile)
         await setDoc(doc(db, "users", user.uid), userProfile)
-        console.log("✅ User profile created successfully")
         return userProfile
       }
 
-      console.log("✅ User profile found in Firestore")
       const userData = userDoc.data() as UserProfile
       return {
         ...userData,
@@ -95,19 +93,15 @@ export class FirebaseAuthService {
         updatedAt: userData.updatedAt instanceof Date ? userData.updatedAt : new Date(userData.updatedAt),
       }
     } catch (error: unknown) {
-      console.error("❌ Login error:", error)
-      
-      // For Firebase errors, extract the error code and get a user-friendly message
       const errorCode = error && typeof error === 'object' && 'code' in error ? (error as { code: string }).code : 'unknown'
-      const errorMessage = FirebaseAuthService.getErrorMessage(errorCode)
-      console.error("🔄 Throwing error with message:", errorMessage)
-      throw new Error(errorMessage)
+      throw new Error(FirebaseAuthService.getErrorMessage(errorCode))
     }
   }
 
   // Logout user
   static async logout(): Promise<void> {
     try {
+      const auth = await getFirebaseAuth()
       await signOut(auth)
     } catch (error: unknown) {
       console.error("Logout error:", error)
@@ -118,6 +112,7 @@ export class FirebaseAuthService {
   // Send password reset email
   static async resetPassword(email: string): Promise<void> {
     try {
+      const auth = await getFirebaseAuth()
       await sendPasswordResetEmail(auth, email)
     } catch (error: unknown) {
       console.error("Password reset error:", error)
@@ -129,6 +124,7 @@ export class FirebaseAuthService {
   // Get current user profile
   static async getCurrentUserProfile(user: User): Promise<UserProfile | null> {
     try {
+      const db = await getFirestore()
       const userDoc = await getDoc(doc(db, "users", user.uid))
 
       if (!userDoc.exists()) {
@@ -150,6 +146,7 @@ export class FirebaseAuthService {
   // Update user profile
   static async updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {
     try {
+      const db = await getFirestore()
       await setDoc(
         doc(db, "users", uid),
         {
@@ -194,3 +191,4 @@ export class FirebaseAuthService {
     }
   }
 }
+

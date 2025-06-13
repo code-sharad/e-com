@@ -1,45 +1,85 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app"
-import { getAuth, Auth } from "firebase/auth"
-import { getFirestore, Firestore } from "firebase/firestore"
-import { getStorage, FirebaseStorage } from "firebase/storage"
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"
+import type { Auth } from "firebase/auth"
+import type { Firestore } from "firebase/firestore"
+import type { FirebaseStorage } from "firebase/storage"
 
 // Your Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyA_IrpHC1dXG4UZVdfubnHtGTAj8Q1KiTU",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "e-com-620fe.firebaseapp.com",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "e-com-620fe",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "e-com-620fe.firebasestorage.app",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "e-com-620fe.appspot.com",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "829977668997",
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:829977668997:web:c27a7fc8594bca51c7e8ec",
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-R8H21DPW4X"
 }
 
-// Initialize Firebase app (avoid duplicate initialization)
 let app: FirebaseApp
-try {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
-} catch (error) {
-  console.error("Firebase initialization error:", error)
-  // Fallback initialization
-  app = initializeApp(firebaseConfig)
+let auth: Auth
+let db: Firestore
+let storage: FirebaseStorage
+
+// Initialize Firebase
+function initializeFirebaseApp() {
+  if (!app) {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
+  }
+  return app
 }
 
-// Initialize Firebase services with error handling
-let auth: Auth, db: Firestore, storage: FirebaseStorage
-
-try {
-  auth = getAuth(app)
-  db = getFirestore(app)
-  storage = getStorage(app)
-
-  console.log("🔥 Firebase services initialized successfully")
-} catch (error) {
-  console.error("Firebase services initialization error:", error)
+// Function to get Firebase Auth instance
+export const getFirebaseAuth = async () => {
+  if (!auth) {
+    const { getAuth } = await import("firebase/auth")
+    const firebaseApp = initializeFirebaseApp()
+    auth = getAuth(firebaseApp)
+  }
+  return auth
 }
 
-export { auth, db, storage }
-export default app
+// Function to get Firestore instance
+export const getFirestore = async () => {
+  if (!db) {
+    const { getFirestore: getFirestoreDb, connectFirestoreEmulator } = await import("firebase/firestore")
+    const firebaseApp = initializeFirebaseApp()
+    db = getFirestoreDb(firebaseApp)
+    
+    // Set timeout settings for Firestore operations
+    if (typeof window !== "undefined") {
+      // Client-side timeout settings
+      const { enableNetwork } = await import("firebase/firestore")
+      try {
+        await enableNetwork(db)
+      } catch (error) {
+        console.warn("Firestore network enable failed:", error)
+      }
+    }
+  }
+  return db
+}
+
+// Function to get Storage instance
+export const getFirebaseStorage = async () => {
+  if (!storage) {
+    const { getStorage: getFirebaseStorageInstance } = await import("firebase/storage")
+    const firebaseApp = initializeFirebaseApp()
+    storage = getFirebaseStorageInstance(firebaseApp)
+  }
+  return storage
+}
 
 // Export configuration status
-export const isFirebaseConfigured = true
-export const isUsingDemoConfig = false
+export const isFirebaseConfigured = process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== undefined
+export const isUsingDemoConfig = !isFirebaseConfigured
+
+// Export a function to preload Firebase
+export const preloadFirebase = () => {
+  if (typeof window === "undefined") return Promise.resolve()
+  
+  return Promise.all([
+    import("firebase/auth"),
+    import("firebase/firestore"),
+    import("firebase/storage")
+  ])
+}
+

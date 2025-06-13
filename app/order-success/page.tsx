@@ -4,8 +4,8 @@ import React from "react"
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
+import Navbar from "@/components/common/navbar"
+import Footer from "@/components/common/footer"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, Package, Truck, Home, ShoppingBag } from "lucide-react"
 import { FirebaseOrdersService, type Order } from "@/lib/firebase/orders"
@@ -94,7 +94,7 @@ export default function OrderSuccessPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Total Amount:</span>
                     <span className="font-bold text-gold-500">
-                      {order?.total ? formatCurrency(order.total) : "₹0"}
+                      {order?.totalAmount ? formatCurrency(order.totalAmount) : "₹0"}
                     </span>
                   </div>
 
@@ -244,3 +244,5 @@ export default function OrderSuccessPage() {
     </div>
   )
 }
+
+

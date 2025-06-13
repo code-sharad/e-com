@@ -1,11 +1,11 @@
-import { FirebaseProductsService } from '@/lib/firebase/products'
+import { ProductService } from '@/lib/firebase/products'
 
 // This function generates all the static paths for the product pages
 // at build time when using the static export feature
 export async function generateStaticParams() {
   try {
     // Try to fetch actual product IDs from Firebase
-    const { products } = await FirebaseProductsService.getProducts()
+    const { products } = await ProductService.getProducts()
     const productIds = products
       .filter(product => product.id) // Ensure we have valid IDs
       .map(product => product.id!)

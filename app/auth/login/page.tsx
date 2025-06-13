@@ -9,7 +9,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Eye, EyeOff, Mail, Lock, CheckCircle } from "lucide-react"
 
 export default function LoginPage() {
@@ -177,3 +177,4 @@ export default function LoginPage() {
     </div>
   )
 }
+

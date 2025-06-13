@@ -1,8 +1,8 @@
-import Navbar from "@/components/navbar"
-import HeroSection from "@/components/hero-section"
-import FeaturedCollections from "@/components/featured-collections"
-import CategoryPreview from "@/components/category-preview"
-import Footer from "@/components/footer"
+import Navbar from "@/components/common/navbar"
+import HeroSection from "@/components/home/hero-section"
+import FeaturedCollections from "@/components/home/featured-collections"
+import CategoryPreview from "@/components/home/category-preview"
+import Footer from "@/components/common/footer"
 
 export default function HomePage() {
   return (
@@ -15,3 +15,4 @@ export default function HomePage() {
     </div>
   )
 }
+

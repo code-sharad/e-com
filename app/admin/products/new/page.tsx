@@ -1,10 +1,13 @@
 "use client"
 // Component memoized for performance (15.66KB)
+// Force dynamic rendering for admin pages that require authentication
+export const dynamic = 'force-dynamic'
+
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,8 +15,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, ArrowLeft, Plus, Minus } from "lucide-react"
-import { FirebaseProductsService } from "@/lib/firebase/products"
-import { ImageUpload } from "@/components/image-upload"
+import { ProductService } from "@/lib/firebase/products"
+import { ImageUpload } from "@/components/firebase/image-upload"
 
 export default function NewProductPage() {
   const { user } = useAuth()
@@ -133,26 +136,25 @@ export default function NewProductPage() {
         name: formData.name.trim(),
         description: formData.description.trim(),
         category: formData.category,
-        price: Number.parseFloat(formData.price),
-        originalPrice: Number.parseFloat(formData.mrp),
-        stockQuantity: Number.parseInt(formData.stock),
-        inStock: formData.status === "active",
-        images: images,
+        price: Number(formData.price),
+        originalPrice: Number(formData.mrp),
+        stockQuantity: Number(formData.stock),
+        inStock: Number(formData.stock) > 0,
+        imageUrl: images[0] || '',
+        images,
         tags: features.filter((f) => f.trim() !== ""),
         specifications: specifications.reduce(
-          (acc, spec) => {
-            if (spec.key.trim() && spec.value.trim()) {
-              acc[spec.key.trim()] = spec.value.trim()
-            }
-            return acc
-          },
-          {} as Record<string, string>,
+          (acc, spec) => ({
+            ...acc,
+            [spec.key]: spec.value,
+          }),
+          {} as Record<string, string>
         ),
-        featured: formData.featured,
+        featured: false
       }
 
       // Save product
-      const productId = await FirebaseProductsService.createProduct(productData)
+      const productId = await ProductService.createProduct(productData)
 
       // Show success message
       alert(`Product "${productData.name}" has been added successfully!`)
@@ -474,3 +476,4 @@ export default function NewProductPage() {
     </div>
   )
 }
+

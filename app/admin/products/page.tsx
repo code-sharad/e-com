@@ -1,4 +1,7 @@
-import { ProtectedRoute } from '@/components/protected-route'
+// Force dynamic rendering for admin pages that require authentication
+export const dynamic = 'force-dynamic'
+
+import { ProtectedRoute } from '@/components/auth/protected-route'
 import AdminProductsClient from './admin-products-client'
 
 export default function AdminProductsPage() {
@@ -8,3 +11,4 @@ export default function AdminProductsPage() {
     </ProtectedRoute>
   )
 }
+
